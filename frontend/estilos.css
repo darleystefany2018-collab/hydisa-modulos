@@ -76,17 +76,16 @@ ol, ul { list-style: none; }
 }
 
 /* ---------- MÓDULO 3: BIENVENIDA ---------- */
-.bienvenida { text-align: center; margin-top: -34px; padding-top: 4px; }
-.logo { width: 92px; height: auto; display: block; margin: 0 auto -2px; }
-.bienvenida__titulo {
-  font-weight: 400; font-size: 2.2rem; letter-spacing: .09em; color: var(--verde-oscuro);
-}
+.bienvenida { text-align: center; margin-top: 8px; }
+.logo { width: 196px; height: 196px; display: block; margin: 0 auto 6px; filter: drop-shadow(0 6px 14px rgba(40,90,90,.18)); }
 .bienvenida__lema { color: var(--texto-suave); font-size: 1rem; margin-top: 2px; }
 .frase {
-  display: inline-flex; align-items: center; gap: 8px; margin-top: 14px;
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 12px;
   padding: 10px 22px; border-radius: 18px; background: var(--verde-claro);
   color: var(--verde-oscuro); font-size: 1rem;
 }
+/* Texto que solo leen los lectores de pantalla (el nombre está dentro del logo) */
+.solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ---------- TARJETA: caja blanca reutilizada por varios módulos ---------- */
 .tarjeta {
@@ -188,3 +187,113 @@ ol, ul { list-style: none; }
   background: var(--verde-oscuro); color: #fff; padding: 11px 20px;
   border-radius: 14px; font-size: .95rem; box-shadow: var(--sombra);
 }
+
+
+/* ==================================================================
+   COMPONENTES DE LAS PANTALLAS INTERNAS
+   (ruta, registro, evolución, calendario, acompañamiento, recursos, perfil)
+   ================================================================== */
+.texto-suave { color: var(--texto-suave); font-size: .95rem; }
+.subtitulo { font-size: 1.05rem; font-weight: 500; margin: 6px 2px 0; }
+.vacio { color: var(--texto-suave); text-align: center; padding: 14px 8px; }
+
+/* Barra superior de las pantallas internas (botón volver + título) */
+.barra-vista { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.barra-vista h2 { font-size: 1.35rem; font-weight: 500; color: var(--verde-oscuro); }
+
+/* Listas de elementos */
+.lista { display: grid; gap: 8px; }
+.item { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 16px; box-shadow: var(--sombra); padding: 12px 14px; }
+.item p { line-height: 1.35; margin-bottom: 4px; }
+.item--nuevo { border-left: 4px solid var(--verde-medio); }
+.item--dia { padding: 0; overflow: hidden; }
+.item__boton { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; }
+.item__boton:disabled { cursor: default; opacity: .55; }
+.item__num { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid #d8d2c3; display: grid; place-items: center; font-size: .9rem; }
+.item--hecho .item__num { background: var(--verde-medio); border-color: var(--verde-medio); color: #fff; }
+.item--hoy .item__num { background: var(--verde-oscuro); border-color: var(--verde-oscuro); color: #fff; }
+.item__num .icono { width: 16px; height: 16px; stroke-width: 2.6; }
+.item__texto { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.item__texto small { color: var(--texto-suave); font-size: .82rem; overflow-wrap: anywhere; }
+.item__detalle { padding: 0 14px 12px 60px; color: var(--texto-suave); font-size: .92rem; }
+.item--dia .enlace { margin: 0 0 12px 60px; }
+.item--registro { display: flex; align-items: center; gap: 12px; }
+.etiqueta { font-size: .72rem; padding: 3px 9px; border-radius: 20px; background: #ece7da; color: var(--texto-suave); }
+.etiqueta--hecho { background: var(--verde-claro); color: var(--verde-oscuro); }
+.etiqueta--hoy { background: var(--verde-oscuro); color: #fff; }
+
+/* Formularios */
+.campo { display: grid; gap: 6px; margin-bottom: 12px; font-size: .92rem; color: var(--texto-suave); }
+.campo input, .campo textarea, .campo select {
+  font: inherit; color: var(--texto); padding: 12px 14px; border-radius: 14px;
+  border: 1px solid var(--borde); background: #fff; width: 100%;
+}
+.campo input:focus, .campo textarea:focus, .campo select:focus { outline: 2px solid var(--verde-medio); outline-offset: 1px; }
+.boton--sec { background: var(--verde-claro); color: var(--verde-oscuro); }
+.boton--sec:hover { background: #d0dfcb; }
+.boton--peligro { background: #fff; color: #b3402f; border: 1px solid #e3b9b2; margin-top: 10px; }
+.boton--peligro:hover { background: #fbeeeb; }
+.fila { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fila .boton { margin-top: 12px; }
+.icono-btn:hover { background: rgba(0,0,0,.05); }
+
+/* Temporizador de la actividad */
+.reloj { font-size: 3rem; font-weight: 300; text-align: center; margin: 14px 0 2px; color: var(--verde-oscuro); font-variant-numeric: tabular-nums; }
+
+/* Registro: estados de ánimo */
+.animos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; }
+.animo { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-radius: 14px; border: 1.5px solid var(--borde); background: #fff; }
+.animo__emoji { font-size: 1.6rem; display: grid; place-items: center; }
+.animo__nombre { font-size: .66rem; color: var(--texto-suave); }
+.animo--activo { border-color: var(--verde-oscuro); background: var(--verde-claro); }
+.item--registro .animo__emoji .icono { color: var(--verde-medio); }
+
+/* Evolución */
+.estadisticas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.estadistica { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 18px; padding: 14px; box-shadow: var(--sombra); display: flex; flex-direction: column; }
+.estadistica strong { font-size: 1.6rem; font-weight: 600; color: var(--verde-oscuro); }
+.estadistica span { font-size: .8rem; color: var(--texto-suave); }
+.grafica { width: 100%; height: auto; }
+
+/* Calendario */
+.calendario { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.celda { background: var(--tarjeta); border: 1.5px solid var(--borde); border-radius: 16px; padding: 10px 2px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.celda small { font-size: .7rem; color: var(--texto-suave); text-transform: capitalize; }
+.celda strong { font-size: 1.4rem; font-weight: 500; }
+.celda__dia { font-size: .68rem; margin-top: 3px; padding: 2px 8px; border-radius: 12px; background: #ece7da; }
+.celda--hecho { background: var(--verde-claro); border-color: var(--verde-medio); }
+.celda--hoy { border-color: var(--verde-oscuro); box-shadow: 0 0 0 3px #cfe0d3; }
+.celda--hoy .celda__dia { background: var(--verde-oscuro); color: #fff; }
+.leyenda { display: flex; gap: 14px; align-items: center; justify-content: center; font-size: .82rem; color: var(--texto-suave); }
+.punto { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #d8d2c3; display: inline-block; margin-right: 4px; }
+.punto--hecho { background: var(--verde-medio); border-color: var(--verde-medio); }
+.punto--hoy { background: var(--verde-oscuro); border-color: var(--verde-oscuro); }
+
+/* Intención (hoja) */
+.opciones { display: grid; gap: 8px; margin-bottom: 14px; }
+.opcion { text-align: left; padding: 13px 14px; border-radius: 14px; border: 1.5px solid var(--borde); background: #fff; line-height: 1.3; }
+.opcion--activa { border-color: var(--verde-oscuro); background: var(--verde-claro); }
+.puntos { padding-left: 20px; display: grid; gap: 10px; line-height: 1.4; }
+.puntos li { list-style: disc; }
+
+/* Respiración guiada */
+.respira-caja { display: grid; place-items: center; height: 220px; }
+.respira { width: 120px; height: 120px; border-radius: 50%; background: var(--verde-claro); border: 3px solid var(--verde-medio);
+           display: grid; place-items: center; font-size: 1.2rem; color: var(--verde-oscuro); transition: transform 4s ease-in-out; }
+.respira--inhala { transform: scale(1.6); }
+.respira--sosten { transform: scale(1.6); }
+.respira--exhala { transform: scale(1); }
+
+/* Hoja: ventana que sube desde abajo */
+.velo--hoja { z-index: 30; }
+.hoja {
+  position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); z-index: 31;
+  width: 100%; max-width: 430px; max-height: 88vh; overflow-y: auto;
+  background: var(--fondo); border-radius: 26px 26px 0 0; padding: 16px 18px 24px;
+  box-shadow: 0 -10px 30px rgba(0,0,0,.18);
+}
+.hoja[hidden], .velo[hidden] { display: none; }
+.hoja__cabecera { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.hoja__titulo { font-size: 1.2rem; font-weight: 500; color: var(--verde-oscuro); }
+.hoja__cuerpo { display: grid; gap: 10px; }
+.aviso { z-index: 40; }

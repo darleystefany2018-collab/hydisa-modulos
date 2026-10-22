@@ -3,19 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>EKILIBRATTE</title>
-  <!-- Tipografía suave y redondeada (Google Fonts). Si no hay internet se usa una por defecto. -->
+  <title>HYDISA</title>
+  <!-- Tipografía suave (Google Fonts). Sin internet se usa una por defecto. -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap">
   <!-- Estilos: todo el aspecto visual vive en este archivo -->
   <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
 
-  <!-- ============================================================
-       ICONOS: una "caja de iconos" reutilizable.
-       Cada <symbol> se dibuja después con <use href="#nombre">.
-       Así no repetimos el dibujo cada vez que lo necesitamos.
-       ============================================================ -->
+  <!-- ICONOS: caja de iconos reutilizable. Cada <symbol> se dibuja luego con <use href="#nombre"> -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
     <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
@@ -32,31 +28,27 @@
     <symbol id="i-book" viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2z"/><path d="M6 18a2 2 0 0 1 2-2h11M10 8h5"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></symbol>
   </svg>
 
   <!-- Contenedor general: simula la pantalla de un celular -->
   <div class="app">
 
-    <!-- ============================================================
-         MÓDULO 1 y 2: CABECERA
+    <!-- MÓDULOS 1 y 2: CABECERA (siempre visible)
          1. Botón de menú principal (abre el panel lateral).
-         2. Perfil del usuario y campana de notificaciones.
-         ============================================================ -->
+         2. Perfil del usuario y campana de notificaciones. -->
     <header class="cabecera">
-      <!-- Módulo 1: abre el menú lateral con las secciones de la app -->
       <button id="btnMenu" class="icono-btn" aria-label="Abrir menú">
         <svg class="icono"><use href="#i-menu"/></svg>
       </button>
-
-      <!-- Módulo 2: quién está usando la app + avisos importantes -->
       <div class="perfil">
         <button class="perfil__avatar" id="btnPerfil" aria-label="Ver mi perfil">
           <svg class="icono"><use href="#i-user"/></svg>
         </button>
         <div class="perfil__datos">
           <span id="saludo" class="perfil__saludo">Hola</span>
-          <!-- El puntito rojo se muestra solo si hay notificaciones nuevas -->
           <button id="btnCampana" class="campana" aria-label="Notificaciones">
             <svg class="icono"><use href="#i-bell"/></svg>
             <span id="puntoNotificacion" class="campana__punto" hidden></span>
@@ -65,133 +57,15 @@
       </div>
     </header>
 
-    <main class="contenido">
+    <!-- ZONA DE VISTAS: aquí el router (router.js) dibuja la pantalla activa:
+         inicio, ruta, actividad, registro, evolución, calendario, etc. -->
+    <main id="vista" class="contenido"></main>
 
-      <!-- ==========================================================
-           MÓDULO 3: MENSAJE DE BIENVENIDA
-           Muestra el logo, el nombre de la app y una frase que inspira.
-           ========================================================== -->
-      <section class="bienvenida">
-        <!-- Logo: hojas dibujadas con SVG (formas simples, colores verdes) -->
-        <svg class="logo" viewBox="0 0 120 80" aria-hidden="true">
-          <defs>
-            <linearGradient id="verdeA" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#8fb08a"/><stop offset="1" stop-color="#4f8566"/>
-            </linearGradient>
-            <linearGradient id="verdeB" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#6e9c78"/><stop offset="1" stop-color="#2f6a52"/>
-            </linearGradient>
-          </defs>
-          <path d="M60 74C38 66 30 40 44 12c18 10 24 34 16 62z" fill="url(#verdeB)"/>
-          <path d="M60 74C82 66 90 40 76 12c-18 10-24 34-16 62z" fill="url(#verdeA)"/>
-          <path d="M58 76C28 72 10 52 8 32c24 2 44 18 50 44z" fill="url(#verdeA)" opacity=".9"/>
-          <path d="M62 76c30-4 48-24 50-44-24 2-44 18-50 44z" fill="url(#verdeB)" opacity=".9"/>
-        </svg>
-        <h1 id="nombreApp" class="bienvenida__titulo">EKILIBRATTE</h1>
-        <p id="lema" class="bienvenida__lema">Tu espacio para volver a ti</p>
-        <p class="frase">
-          <svg class="icono icono--chico"><use href="#i-leaf"/></svg>
-          <span id="frase">“Pequeñas acciones, grandes cambios”</span>
-        </p>
-      </section>
-
-      <!-- ==========================================================
-           MÓDULO 4: INTENCIÓN PERSONAL
-           La persona ve la intención que eligió y puede cambiarla.
-           ========================================================== -->
-      <section class="tarjeta intencion">
-        <div class="intencion__icono"><svg class="icono"><use href="#i-sun"/></svg></div>
-        <div>
-          <p class="texto-chico">Tu intención actual</p>
-          <p id="intencion" class="intencion__texto">—</p>
-          <button id="btnCambiarIntencion" class="enlace">
-            Cambiar intención <svg class="icono icono--mini"><use href="#i-chevron"/></svg>
-          </button>
-        </div>
-      </section>
-
-      <!-- ==========================================================
-           MÓDULO 5: PROGRESO DE LA RUTA
-           Muestra los días de la ruta (hechos, actual, pendientes),
-           en qué día va la persona y el porcentaje completado.
-           Los círculos de los días los dibuja app.js.
-           ========================================================== -->
-      <section class="tarjeta">
-        <h2 id="tituloRuta" class="tarjeta__titulo">Tu ruta</h2>
-        <ol id="diasRuta" class="dias"></ol>
-        <div class="progreso__textos">
-          <span id="textoDia">Día 1 de 1</span>
-          <span id="textoPorcentaje">0 % completado</span>
-        </div>
-        <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-          <div id="barraRelleno" class="barra__relleno"></div>
-        </div>
-      </section>
-
-      <!-- ==========================================================
-           MÓDULO 6: ACTIVIDAD PRINCIPAL
-           La actividad recomendada para hoy: imagen, descripción,
-           tiempo estimado, tipo de ejercicio y el botón principal.
-           ========================================================== -->
-      <section class="tarjeta actividad">
-        <div class="actividad__cabecera">
-          <span class="actividad__etiqueta">
-            <span class="actividad__hoja"><svg class="icono icono--chico"><use href="#i-leaf"/></svg></span>
-            Actividad de hoy
-          </span>
-          <span id="diaActividad" class="texto-chico">Día 1</span>
-        </div>
-
-        <div class="actividad__cuerpo">
-          <!-- Ilustración de la actividad (en el futuro puede ser una foto real) -->
-          <div class="actividad__imagen" aria-hidden="true">
-            <svg viewBox="0 0 120 120" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
-              <defs><linearGradient id="fondoImg" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#efe3cf"/><stop offset="1" stop-color="#d9c4a3"/></linearGradient></defs>
-              <rect width="120" height="120" fill="url(#fondoImg)"/>
-              <path d="M80 70c-2-24 8-42 26-46 4 22-6 40-26 46z" fill="#5d8a5f"/>
-              <path d="M84 72c-14-12-16-28-8-40 14 8 16 26 8 40z" fill="#7aa06f"/>
-              <rect x="66" y="64" width="34" height="26" rx="6" fill="#f3ece0"/>
-              <rect x="10" y="78" width="70" height="34" rx="4" fill="#4a4137" transform="rotate(-8 10 78)"/>
-              <rect x="14" y="76" width="66" height="30" rx="3" fill="#f6efe3" transform="rotate(-8 14 76)"/>
-              <path d="M24 90h40M26 98h30" stroke="#cdbfa6" stroke-width="2" transform="rotate(-8 24 90)"/>
-            </svg>
-          </div>
-          <div>
-            <h3 id="actividadTitulo" class="actividad__titulo">—</h3>
-            <p id="actividadDescripcion" class="actividad__descripcion">—</p>
-            <div class="actividad__datos">
-              <span><svg class="icono icono--chico"><use href="#i-clock"/></svg> <span id="actividadMinutos">10 minutos</span></span>
-              <span><svg class="icono icono--chico"><use href="#i-leaf"/></svg> <span id="actividadTipo">Reflexión</span></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Botón de acción principal -->
-        <button id="btnComenzar" class="boton">
-          Comenzar actividad <svg class="icono"><use href="#i-arrow"/></svg>
-        </button>
-        <button id="btnVerTodas" class="enlace enlace--centro">
-          Ver todas las actividades <svg class="icono icono--mini"><use href="#i-chevron"/></svg>
-        </button>
-      </section>
-
-      <!-- ==========================================================
-           MÓDULO 7: ACCESOS RÁPIDOS
-           Cuatro atajos a las secciones más importantes.
-           Las tarjetas las dibuja app.js a partir de una lista.
-           ========================================================== -->
-      <section id="accesos" class="accesos" aria-label="Accesos rápidos"></section>
-    </main>
-
-    <!-- ============================================================
-         MÓDULO 8: NAVEGACIÓN PRINCIPAL (barra inferior)
-         Permite cambiar entre las secciones principales de la app.
-         ============================================================ -->
+    <!-- MÓDULO 8: NAVEGACIÓN PRINCIPAL (barra inferior). La dibuja js/menu.js -->
     <nav id="navegacion" class="navegacion" aria-label="Navegación principal"></nav>
   </div>
 
-  <!-- Panel lateral del Módulo 1 (se abre con el botón de menú) -->
+  <!-- Panel lateral del MÓDULO 1 (se abre con el botón de menú). Lo llena js/menu.js -->
   <div id="velo" class="velo" hidden></div>
   <aside id="panelMenu" class="panel" aria-hidden="true">
     <button id="btnCerrarMenu" class="icono-btn panel__cerrar" aria-label="Cerrar menú">
@@ -201,10 +75,36 @@
     <ul id="listaMenu" class="panel__lista"></ul>
   </aside>
 
-  <!-- Mensaje flotante breve (avisos como "Actividad iniciada") -->
+  <!-- HOJA: ventana que sube desde abajo (intención, notificaciones, recursos...) -->
+  <div id="hojaVelo" class="velo velo--hoja" hidden></div>
+  <section id="hoja" class="hoja" role="dialog" aria-modal="true" aria-labelledby="hojaTitulo" hidden>
+    <div class="hoja__cabecera">
+      <h2 id="hojaTitulo" class="hoja__titulo"></h2>
+      <button id="btnCerrarHoja" class="icono-btn" aria-label="Cerrar"><svg class="icono"><use href="#i-close"/></svg></button>
+    </div>
+    <div id="hojaCuerpo" class="hoja__cuerpo"></div>
+  </section>
+
+  <!-- Mensaje flotante breve -->
   <div id="aviso" class="aviso" role="status" hidden></div>
 
-  <!-- Lógica: llena la pantalla con datos y responde a los clics -->
-  <script src="app.js"></script>
+  <!-- ===== SCRIPTS: el orden importa (cada uno usa lo que cargó el anterior) ===== -->
+  <script src="js/datos.js"></script>          <!-- contenido fijo: actividades, recursos, secciones -->
+  <script src="js/almacen.js"></script>        <!-- estado de la persona y guardado en el navegador -->
+  <script src="js/ui.js"></script>             <!-- ayudas: avisos, hojas, iconos -->
+  <script src="js/router.js"></script>         <!-- cambia de pantalla según la dirección (#/ruta) -->
+  <script src="js/notificaciones.js"></script> <!-- MÓDULO 2 -->
+  <script src="js/intencion.js"></script>      <!-- MÓDULO 4 -->
+  <script src="js/vistas/inicio.js"></script>  <!-- MÓDULOS 3, 4, 5, 6 y 7 (pantalla de inicio) -->
+  <script src="js/vistas/ruta.js"></script>
+  <script src="js/vistas/actividad.js"></script>
+  <script src="js/vistas/registro.js"></script>
+  <script src="js/vistas/evolucion.js"></script>
+  <script src="js/vistas/calendario.js"></script>
+  <script src="js/vistas/acompanamiento.js"></script>
+  <script src="js/vistas/recursos.js"></script>
+  <script src="js/vistas/perfil.js"></script>
+  <script src="js/menu.js"></script>           <!-- MÓDULOS 1 y 8 -->
+  <script src="js/main.js"></script>           <!-- arranque -->
 </body>
 </html>
