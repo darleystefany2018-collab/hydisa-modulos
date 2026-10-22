@@ -1,0 +1,190 @@
+/* ==================================================================
+   ESTILOS DE EKILIBRATTE
+   Orden del archivo: variables -> base -> un bloque por cada módulo.
+   ================================================================== */
+
+/* ---------- VARIABLES: colores y medidas en un solo lugar ----------
+   Si quieres cambiar el verde de la app, lo cambias aquí y se
+   actualiza en toda la pantalla. */
+:root {
+  --fondo: #f6f0e6;          /* crema de fondo */
+  --tarjeta: #fffdf9;        /* blanco cálido de las tarjetas */
+  --verde-oscuro: #1f5a46;   /* botones y elementos principales */
+  --verde-medio: #3f7d62;
+  --verde-claro: #dfe9dc;    /* fondos suaves */
+  --texto: #2b3a34;
+  --texto-suave: #6d7a73;
+  --amarillo: #fbefd0;       /* icono del sol */
+  --borde: #e6dfd1;
+  --sombra: 0 6px 18px rgba(60, 70, 50, .08);
+  --radio: 22px;
+}
+
+/* ---------- BASE: reglas generales ---------- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Jost", "Segoe UI", system-ui, sans-serif;
+  color: var(--texto);
+  background: #e9e3d6;
+  min-height: 100vh;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+ol, ul { list-style: none; }
+
+/* Los iconos son trazos (líneas) del color del texto */
+.icono { width: 24px; height: 24px; fill: none; stroke: currentColor;
+         stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.icono--chico { width: 18px; height: 18px; }
+.icono--mini  { width: 15px; height: 15px; vertical-align: -3px; }
+.texto-chico  { font-size: .85rem; color: var(--texto-suave); }
+
+/* ---------- CONTENEDOR: simula la pantalla de un celular ---------- */
+.app {
+  position: relative;
+  max-width: 430px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding-bottom: 96px;      /* espacio para que la barra inferior no tape nada */
+  background:
+    radial-gradient(circle at 0% 8%,  rgba(120,160,110,.28), transparent 38%),
+    radial-gradient(circle at 100% 14%, rgba(120,160,110,.22), transparent 34%),
+    var(--fondo);
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(0,0,0,.12);
+}
+.contenido { padding: 0 18px; display: grid; gap: 14px; }
+
+/* ---------- MÓDULOS 1 y 2: CABECERA ---------- */
+.cabecera {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 22px 18px 0;
+  position: relative; z-index: 2;   /* queda por encima de la bienvenida para recibir los clics */
+}
+.icono-btn { padding: 6px; border-radius: 12px; color: var(--texto); }
+.perfil { display: flex; align-items: center; gap: 10px; }
+.perfil__avatar {
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--verde-claro); color: var(--verde-medio);
+  display: grid; place-items: center;
+}
+.perfil__datos { display: flex; flex-direction: column; align-items: center; }
+.perfil__saludo { font-size: .95rem; }
+.campana { position: relative; padding: 2px; }
+.campana__punto {            /* puntito rojo de "hay notificaciones" */
+  position: absolute; top: 2px; right: 3px;
+  width: 9px; height: 9px; border-radius: 50%; background: #e0504f;
+}
+
+/* ---------- MÓDULO 3: BIENVENIDA ---------- */
+.bienvenida { text-align: center; margin-top: -34px; padding-top: 4px; }
+.logo { width: 92px; height: auto; display: block; margin: 0 auto -2px; }
+.bienvenida__titulo {
+  font-weight: 400; font-size: 2.2rem; letter-spacing: .09em; color: var(--verde-oscuro);
+}
+.bienvenida__lema { color: var(--texto-suave); font-size: 1rem; margin-top: 2px; }
+.frase {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 14px;
+  padding: 10px 22px; border-radius: 18px; background: var(--verde-claro);
+  color: var(--verde-oscuro); font-size: 1rem;
+}
+
+/* ---------- TARJETA: caja blanca reutilizada por varios módulos ---------- */
+.tarjeta {
+  background: var(--tarjeta); border-radius: var(--radio);
+  padding: 18px; box-shadow: var(--sombra); border: 1px solid var(--borde);
+}
+.tarjeta__titulo { font-size: 1.1rem; font-weight: 500; margin-bottom: 14px; }
+
+/* ---------- MÓDULO 4: INTENCIÓN PERSONAL ---------- */
+.intencion { display: flex; gap: 14px; align-items: center; margin-top: 6px; }
+.intencion__icono {
+  flex: none; width: 60px; height: 60px; border-radius: 50%;
+  background: var(--amarillo); color: #d9a441; display: grid; place-items: center;
+}
+.intencion__icono .icono { width: 30px; height: 30px; }
+.intencion__texto { font-size: 1.28rem; font-weight: 600; line-height: 1.2; margin: 2px 0 6px; }
+.enlace { color: var(--verde-oscuro); font-size: .95rem; display: inline-flex; align-items: center; gap: 4px; }
+.enlace--centro { display: flex; justify-content: center; width: 100%; margin-top: 14px; }
+
+/* ---------- MÓDULO 5: PROGRESO DE LA RUTA ---------- */
+/* Una sola fila: 11 columnas iguales, cada círculo ocupa su columna */
+.dias { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px; margin-bottom: 14px; }
+.dia {
+  width: 100%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
+  font-size: .78rem; border: 1.5px solid #d8d2c3; color: var(--texto-suave); background: #fff;
+}
+.dia--hecho  { background: var(--verde-medio); border-color: var(--verde-medio); color: #fff; }
+.dia--actual { background: var(--verde-oscuro); border-color: var(--verde-oscuro); color: #fff;
+               box-shadow: 0 0 0 3px #cfe0d3; }
+.dia .icono { width: 15px; height: 15px; stroke-width: 2.6; }
+.progreso__textos { display: flex; justify-content: space-between; font-size: .9rem; color: var(--texto-suave); margin-bottom: 8px; }
+.barra { height: 8px; border-radius: 8px; background: #e7e2d6; overflow: hidden; }
+.barra__relleno { height: 100%; width: 0; border-radius: 8px; background: var(--verde-medio); transition: width .6s ease; }
+
+/* ---------- MÓDULO 6: ACTIVIDAD PRINCIPAL ---------- */
+.actividad__cabecera { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.actividad__etiqueta { display: inline-flex; align-items: center; gap: 10px; font-weight: 500; }
+.actividad__hoja {
+  width: 36px; height: 36px; border-radius: 12px; background: var(--verde-claro);
+  color: var(--verde-medio); display: grid; place-items: center;
+}
+.actividad__cuerpo { display: grid; grid-template-columns: 128px 1fr; gap: 14px; align-items: start; }
+.actividad__imagen { width: 128px; height: 140px; border-radius: 16px; overflow: hidden; }
+.actividad__titulo { font-size: 1.2rem; font-weight: 600; line-height: 1.2; }
+.actividad__descripcion { color: var(--texto-suave); font-size: .95rem; line-height: 1.35; margin: 6px 0 10px; }
+.actividad__datos { display: flex; gap: 14px; flex-wrap: wrap; font-size: .85rem; color: var(--texto-suave); }
+.actividad__datos span { display: inline-flex; align-items: center; gap: 5px; }
+.boton {
+  width: 100%; margin-top: 16px; padding: 16px; border-radius: 16px;
+  background: var(--verde-oscuro); color: #fff; font-size: 1.1rem; font-weight: 500;
+  display: flex; justify-content: center; align-items: center; gap: 10px;
+  transition: transform .1s, background .2s;
+}
+.boton:hover { background: #17483a; }
+.boton:active { transform: scale(.98); }
+
+/* ---------- MÓDULO 7: ACCESOS RÁPIDOS ---------- */
+.accesos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.acceso {
+  background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 18px;
+  padding: 14px 4px 12px; text-align: center; box-shadow: var(--sombra);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.acceso .icono { width: 30px; height: 30px; color: var(--verde-oscuro); margin-bottom: 4px; }
+.acceso__nombre { font-size: .74rem; font-weight: 500; line-height: 1.15; }
+.acceso__detalle { font-size: .66rem; color: var(--texto-suave); line-height: 1.15; }
+
+/* ---------- MÓDULO 8: NAVEGACIÓN INFERIOR ---------- */
+.navegacion {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 430px; display: flex; justify-content: space-around;
+  padding: 10px 6px 14px; background: var(--tarjeta); border-top: 1px solid var(--borde);
+}
+.nav__item { display: flex; flex-direction: column; align-items: center; gap: 3px;
+             font-size: .78rem; color: var(--texto-suave); flex: 1; }
+.nav__item .icono { width: 28px; height: 28px; }
+.nav__item--activo { color: var(--verde-oscuro); font-weight: 500; }
+.nav__item--activo .icono { fill: var(--verde-oscuro); }
+
+/* ---------- PANEL LATERAL (Módulo 1) ---------- */
+.velo { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 10; }
+.panel {
+  position: fixed; top: 0; bottom: 0; left: 0; width: min(290px, 80vw); z-index: 11;
+  background: var(--tarjeta); padding: 22px 18px; transform: translateX(-105%);
+  transition: transform .3s ease; box-shadow: 6px 0 24px rgba(0,0,0,.15);
+}
+.panel--abierto { transform: translateX(0); }
+.panel__cerrar { margin-left: auto; display: block; }
+.panel__titulo { font-size: 1.3rem; font-weight: 500; color: var(--verde-oscuro); margin: 6px 0 14px; }
+.panel__lista li button {
+  width: 100%; text-align: left; padding: 13px 10px; border-radius: 12px;
+  display: flex; align-items: center; gap: 12px; font-size: 1rem;
+}
+.panel__lista li button:hover { background: var(--verde-claro); }
+
+/* ---------- AVISO FLOTANTE ---------- */
+.aviso {
+  position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%); z-index: 20;
+  background: var(--verde-oscuro); color: #fff; padding: 11px 20px;
+  border-radius: 14px; font-size: .95rem; box-shadow: var(--sombra);
+}
