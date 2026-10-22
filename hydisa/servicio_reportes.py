@@ -1,5 +1,5 @@
 """RF04/RF10 guardar reporte y ruta - RF13 cumplimiento - RF15 historial - RF16 exportar."""
-import sqlite3
+from .base_datos import ErrorIntegridad
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
@@ -31,7 +31,7 @@ class ServicioReportes:
             reporte_id = self.bd.ejecutar(
                 "INSERT INTO reportes (usuario_id, nombre_archivo, hash_sha256, texto) VALUES (?,?,?,?)",
                 (usuario.id, Path(ruta_pdf).name, self.pdf.calcular_hash(ruta_pdf), texto))
-        except sqlite3.IntegrityError as error:
+        except ErrorIntegridad as error:
             raise ArchivoInvalidoError("Ya analizaste este mismo PDF antes.") from error
         for item in self.motor.construir_ruta(texto):
             self.bd.ejecutar(

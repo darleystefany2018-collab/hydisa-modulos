@@ -20,6 +20,16 @@ venv\Scripts\activate
 pip install -r requirements.txt
 py main.py
 ```
+## Base de datos
+
+Por defecto usa SQLite local. Para usar PostgreSQL en la nube (Supabase),
+crea un archivo `.env` en la carpeta principal con una línea:
+
+```
+DATABASE_URL=postgresql://usuario:contraseña@servidor:5432/postgres
+```
+
+El archivo `.env` **no se sube a GitHub** porque contiene la contraseña.
 
 ## Pruebas
 ```
@@ -27,5 +37,5 @@ py -m unittest discover -s tests -v
 ```
 
 ## Integrantes
-Darley Sthefany Guevara, Dennis Yeraldin Pamplona Mahecha,
-Iván Camilo Ochoa, Diego Andrés Ramosssssss
+Darley Sthefany Guevara  Herrera, Dennis Yeraldin Pamplona Mahecha,
+Iván Camilo Ochoa, Diego Andrés Ramos Jimenez

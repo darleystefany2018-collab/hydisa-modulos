@@ -4,3 +4,4 @@ __pycache__/
 datos/*.db
 datos/reportes/
 .vscode/
+.env
