@@ -297,3 +297,21 @@ ol, ul { list-style: none; }
 .hoja__titulo { font-size: 1.2rem; font-weight: 500; color: var(--verde-oscuro); }
 .hoja__cuerpo { display: grid; gap: 10px; }
 .aviso { z-index: 40; }
+
+/* ---------- MI ANÁLISIS (funciones de main.py) ---------- */
+.pestanas { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #ece7da; padding: 4px; border-radius: 16px; margin: 12px 0; }
+.pestana { padding: 10px; border-radius: 12px; font-weight: 500; color: var(--texto-suave); }
+.pestana--activa { background: var(--tarjeta); color: var(--verde-oscuro); box-shadow: var(--sombra); }
+.fila-usuario { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; }
+.mensaje { padding: 10px 12px; border-radius: 12px; font-size: .92rem; margin: 6px 0 4px; }
+.mensaje--error { background: #fbeeeb; color: #9a3322; border: 1px solid #e3b9b2; }
+.mensaje--ok { background: var(--verde-claro); color: var(--verde-oscuro); }
+.archivo { display: flex; align-items: center; gap: 10px; padding: 16px; margin: 12px 0 4px; border: 1.5px dashed var(--verde-medio); border-radius: 16px; background: #fff; color: var(--verde-oscuro); cursor: pointer; overflow-wrap: anywhere; }
+.archivo input { display: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip { background: var(--verde-claro); color: var(--verde-oscuro); padding: 4px 10px; border-radius: 20px; font-size: .85rem; }
+.marcar { flex: none; font-size: .78rem; padding: 6px 10px; border-radius: 20px; background: var(--verde-oscuro); color: #fff; }
+.marcar:disabled { opacity: .5; }
+.analisis-acceso { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin-bottom: 12px; }
+.analisis-acceso small { color: var(--texto-suave); }
+.boton:disabled { opacity: .6; cursor: default; }

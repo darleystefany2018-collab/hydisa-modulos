@@ -97,6 +97,13 @@ App.vistas.inicio = {
         <button class="enlace enlace--centro" data-ir="ruta">Ver todas las actividades ${icono("i-chevron", "icono icono--mini")}</button>
       </section>
 
+      <!-- ANÁLISIS DE PDF: lleva a las funciones de main.py (cargar PDF, historial, ruta, exportar) -->
+      <button class="tarjeta analisis-acceso" data-ir="analisis">
+        <span class="actividad__hoja">${icono("i-file", "icono icono--chico")}</span>
+        <span class="item__texto"><strong>Analizar mi reporte PDF</strong><small>Sube tu PDF y recibe tu ruta personalizada</small></span>
+        ${icono("i-chevron", "icono icono--mini")}
+      </button>
+
       <!-- MÓDULO 7: ACCESOS RÁPIDOS -->
       <section class="accesos" aria-label="Accesos rápidos">${accesos}</section>`;
   },

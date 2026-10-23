@@ -90,7 +90,7 @@ class BaseDatos:
         else:
             if ruta != ":memory:":
                 Path(ruta).parent.mkdir(parents=True, exist_ok=True)
-            self.conexion = sqlite3.connect(str(ruta))
+            self.conexion = sqlite3.connect(str(ruta), check_same_thread=False)   # el servidor atiende de a una petición
             self.conexion.row_factory = sqlite3.Row
             self.conexion.execute("PRAGMA foreign_keys = ON")
             self.conexion.executescript(ESQUEMA_SQLITE)
