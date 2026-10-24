@@ -97,6 +97,14 @@ App.vistas.inicio = {
         <button class="enlace enlace--centro" data-ir="ruta">Ver todas las actividades ${icono("i-chevron", "icono icono--mini")}</button>
       </section>
 
+      ${App.esAdmin() ? `
+      <!-- ADMINISTRACIÓN: solo se dibuja para el administrador (el servidor igual lo verifica) -->
+      <button class="tarjeta analisis-acceso" data-ir="admin">
+        <span class="actividad__hoja">${icono("i-shield", "icono icono--chico")}</span>
+        <span class="item__texto"><strong>Administración</strong><small>Usuarios, permisos y creación de cuentas</small></span>
+        ${icono("i-chevron", "icono icono--mini")}
+      </button>` : ""}
+
       <!-- ANÁLISIS DE PDF: lleva a las funciones de main.py (cargar PDF, historial, ruta, exportar) -->
       <button class="tarjeta analisis-acceso" data-ir="analisis">
         <span class="actividad__hoja">${icono("i-file", "icono icono--chico")}</span>

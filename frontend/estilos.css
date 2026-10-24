@@ -341,3 +341,9 @@ ol, ul { list-style: none; }
 .acceso__o::before, .acceso__o::after { content: ""; flex: 1; height: 1px; background: var(--borde); }
 .acceso__pie { text-align: center; margin-top: 16px; }
 .acceso__tarjeta .mensaje[hidden] { display: none; }
+
+/* ---------- ADMINISTRACIÓN ---------- */
+.permiso { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--borde); cursor: pointer; }
+.permiso input { width: 20px; height: 20px; accent-color: var(--verde-oscuro); flex: none; }
+.permiso:last-of-type { border-bottom: 0; }
+.campo input[type=text], .campo input[type=email] { width: 100%; }

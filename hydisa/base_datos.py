@@ -8,6 +8,11 @@ import os
 import sqlite3
 from pathlib import Path
 
+from .config import PERMISOS
+
+# Valor por defecto de la columna: las cuentas que ya existían conservan todo su acceso.
+PERMISOS_POR_DEFECTO = ",".join(PERMISOS)
+
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -22,6 +27,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     password_hash TEXT    NOT NULL,
     rol           TEXT    NOT NULL DEFAULT 'usuario',
     activo        INTEGER NOT NULL DEFAULT 1,
+    permisos      TEXT    NOT NULL DEFAULT '{permisos}',
     creado_en     TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS reportes (
@@ -51,6 +57,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     password_hash TEXT      NOT NULL,
     rol           TEXT      NOT NULL DEFAULT 'usuario',
     activo        INTEGER   NOT NULL DEFAULT 1,
+    permisos      TEXT      NOT NULL DEFAULT '{permisos}',
     creado_en     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS reportes (
@@ -85,7 +92,8 @@ class BaseDatos:
             import psycopg
             from psycopg.rows import dict_row
             self.conexion = psycopg.connect(url, autocommit=True, row_factory=dict_row)
-            self.conexion.execute(ESQUEMA_POSTGRES)
+            self.conexion.execute(ESQUEMA_POSTGRES.format(permisos=PERMISOS_POR_DEFECTO))
+            self._migrar()
             self._errores_integridad = (psycopg.errors.IntegrityError,)
         else:
             if ruta != ":memory:":
@@ -93,8 +101,19 @@ class BaseDatos:
             self.conexion = sqlite3.connect(str(ruta), check_same_thread=False)   # el servidor atiende de a una petición
             self.conexion.row_factory = sqlite3.Row
             self.conexion.execute("PRAGMA foreign_keys = ON")
-            self.conexion.executescript(ESQUEMA_SQLITE)
+            self.conexion.executescript(ESQUEMA_SQLITE.format(permisos=PERMISOS_POR_DEFECTO))
+            self._migrar()
             self._errores_integridad = (sqlite3.IntegrityError,)
+
+    def _migrar(self):
+        """Bases creadas antes de existir el control de permisos: agrega la columna que falta."""
+        agregar = f"ALTER TABLE usuarios ADD COLUMN {{si_no_existe}}permisos TEXT NOT NULL DEFAULT '{PERMISOS_POR_DEFECTO}'"
+        if self.es_postgres:
+            self.conexion.execute(agregar.format(si_no_existe="IF NOT EXISTS "))
+        else:
+            columnas = [f["name"] for f in self.conexion.execute("PRAGMA table_info(usuarios)")]
+            if "permisos" not in columnas:
+                self.conexion.execute(agregar.format(si_no_existe=""))
 
     def _preparar(self, sql):
         """PostgreSQL usa %s en lugar de ? para los parámetros."""

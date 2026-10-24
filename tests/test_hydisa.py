@@ -55,7 +55,7 @@ class PruebasHydisa(unittest.TestCase):
         with self.assertRaises(ArchivoInvalidoError):
             self.reportes.analizar_pdf(self.ana, falso)
 
-    def test_rechaza_pdf_danado(self):
+    def test_rechaza_pdf_dañado(self):
         roto = self.tmp / "roto.pdf"
         roto.write_bytes(b"%PDF-1.4 basura")
         with self.assertRaises(ArchivoInvalidoError):
@@ -90,6 +90,24 @@ class PruebasHydisa(unittest.TestCase):
     def test_motor_prioriza(self):
         m = MotorReglas()
         self.assertEqual(m.priorizar({"Mental": 1, "Emocional": 5}), ["Emocional", "Mental"])
+
+
+    def test_permisos_por_usuario(self):
+        luis = self.usuarios.registrar("Luis", "luis@mail.com", "clave12345", permisos=["ver_reportes"])
+        self.assertTrue(luis.tiene_permiso("ver_reportes"))
+        self.assertFalse(luis.tiene_permiso("cargar_pdf"))
+        self.assertTrue(self.ana.tiene_permiso("exportar_pdf"))          # por defecto: todos
+        with self.assertRaises(DatosInvalidosError):
+            self.usuarios.registrar("Eva", "eva@mail.com", "clave12345", permisos=["inventado"])
+
+    def test_solo_la_cuenta_oficial_puede_ser_administradora(self):
+        with self.assertRaises(DatosInvalidosError):
+            self.usuarios.registrar("Falso", "falso@mail.com", "clave12345", rol="administrador")
+        self.assertEqual(self.usuarios.asegurar_administrador("ClaveAdmin123"), "creada")
+        self.assertEqual(self.usuarios.asegurar_administrador("ClaveAdmin123"), "sin cambios")
+        admin = self.usuarios.iniciar_sesion("HYDISA123@gmail.com", "ClaveAdmin123")
+        self.assertTrue(admin.es_administrador())
+        self.assertFalse(self.ana.es_administrador())
 
 
 if __name__ == "__main__":

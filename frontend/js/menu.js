@@ -12,7 +12,7 @@ App.pintarNavegacion = () => {
       ${icono(s.icono)}<span>${s.nombre}</span>
     </button>`).join("");
 
-  $("listaMenu").innerHTML = App.SECCIONES.map((s) => `
+  $("listaMenu").innerHTML = App.SECCIONES.filter((s) => !s.soloAdmin || App.esAdmin()).map((s) => `
     <li><button data-ir="${s.id}">${icono(s.icono)} ${s.nombre}</button></li>`).join("");
 };
 

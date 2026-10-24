@@ -62,7 +62,6 @@ App.api = {
   },
 
   /* ----- Una función por cada opción de main.py ----- */
-  registrar: (nombre, correo, clave) => App.api.llamar("POST", "registro", { json: { nombre, correo, clave } }),
   async iniciarSesion(correo, clave) {
     const r = await this.llamar("POST", "login", { json: { correo, clave } });
     this.guardarSesion(r.token, r.usuario);
@@ -78,7 +77,21 @@ App.api = {
   verRuta: (id) => App.api.llamar("GET", `reportes/${id}/ruta`),
   palabras: (id) => App.api.llamar("GET", `reportes/${id}/palabras`),
   marcarActividad: (id, n) => App.api.llamar("POST", `reportes/${id}/actividades/${n}/cumplir`),
-  exportarPdf: (id) => App.api.llamar("GET", `reportes/${id}/pdf`, { blob: true })
+  exportarPdf: (id) => App.api.llamar("GET", `reportes/${id}/pdf`, { blob: true }),
+
+  /* ----- Administración (el servidor responde 403 a quien no sea administrador) ----- */
+  admin: {
+    usuarios: () => App.api.llamar("GET", "admin/usuarios"),
+    usuario: (id) => App.api.llamar("GET", `admin/usuarios/${id}`),
+    crear: (datos) => App.api.llamar("POST", "admin/usuarios", { json: datos }),
+    permisos: (id, lista) => App.api.llamar("POST", `admin/usuarios/${id}/permisos`, { json: { permisos: lista } }),
+    reporte: (id, reporteId) => App.api.llamar("GET", `admin/usuarios/${id}/reportes/${reporteId}`)
+  }
 };
+
+/* OJO: estas dos preguntas solo sirven para mostrar u ocultar botones.
+   La seguridad real está en el servidor, que revisa el rol y los permisos en cada solicitud. */
+App.esAdmin = () => !!(App.api.usuario && App.api.usuario.es_admin);
+App.puede = (permiso) => !!(App.api.usuario && (App.api.usuario.es_admin || (App.api.usuario.permisos || []).includes(permiso)));
 
 App.api.cargarSesion();

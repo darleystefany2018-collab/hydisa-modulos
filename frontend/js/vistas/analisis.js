@@ -38,16 +38,18 @@
 
   /* ---------- Con sesión: panel principal ---------- */
   function dibujarPanel() {
+    /* Solo se ofrecen las pestañas que la cuenta tiene permitidas (el servidor igual lo comprueba) */
+    const pestanas = [["cargar", "Cargar PDF", "cargar_pdf"], ["historial", "Historial", "ver_reportes"]]
+      .filter(([, , permiso]) => App.puede(permiso)).map(([clave, nombre]) => [clave, nombre]);
+    if (!pestanas.some(([clave]) => clave === pestana) && pestanas.length) pestana = pestanas[0][0];
     raiz.innerHTML = `
       <section class="tarjeta fila-usuario">
         <div><p class="texto-chico">Sesión iniciada</p><strong>${esc(App.api.usuario.nombre)}</strong>
           <p class="texto-chico">${esc(App.api.usuario.correo)}</p></div>
         <button id="btnSalir" class="enlace">Cerrar sesión</button>
       </section>
-      <div class="pestanas">
-        <button class="pestana ${pestana === "cargar" ? "pestana--activa" : ""}" data-p="cargar">Cargar PDF</button>
-        <button class="pestana ${pestana === "historial" ? "pestana--activa" : ""}" data-p="historial">Historial</button>
-      </div>
+      ${pestanas.length ? `<div class="pestanas" style="grid-template-columns:repeat(${pestanas.length},1fr)">${pestanas.map(([clave, nombre]) =>
+        `<button class="pestana ${pestana === clave ? "pestana--activa" : ""}" data-p="${clave}">${nombre}</button>`).join("")}</div>` : ""}
       <div id="zona"></div>`;
 
     raiz.querySelector("#btnSalir").addEventListener("click", async () => {
@@ -56,7 +58,9 @@
     raiz.querySelectorAll(".pestana").forEach((b) =>
       b.addEventListener("click", () => { pestana = b.dataset.p; dibujarPanel(); }));
 
-    if (pestana === "historial") dibujarHistorial(); else dibujarCarga();
+    if (!pestanas.length) {
+      raiz.querySelector("#zona").innerHTML = `<p class="vacio">Tu cuenta aún no tiene permisos habilitados. Pídele al administrador que te los asigne.</p>`;
+    } else if (pestana === "historial") dibujarHistorial(); else dibujarCarga();
   }
 
   /* ---------- Cargar PDF (menú 1) ---------- */
@@ -140,19 +144,19 @@
           <span class="item__num">${i.cumplida ? icono("i-check") : Number(i.posicion)}</span>
           <span class="item__texto"><strong>${esc(i.actividad)}</strong><small>${esc(i.categoria)} · prioridad ${Number(i.prioridad)}</small></span>
           ${i.cumplida ? `<span class="etiqueta etiqueta--hecho">Cumplida</span>`
-            : `<button class="marcar" data-n="${Number(i.posicion)}">Marcar cumplida</button>`}
+            : (App.puede("marcar_actividades") ? `<button class="marcar" data-n="${Number(i.posicion)}">Marcar cumplida</button>` : "")}
         </div>
       </li>`).join("");
 
     raiz.innerHTML = `
-      <button id="btnVolver" class="enlace">${icono("i-back", "icono icono--mini")} Volver al historial</button>
+      <button id="btnVolver" class="enlace">${icono("i-back", "icono icono--mini")} Volver</button>
       ${recienAnalizado ? msg(`Reporte ${id} analizado. Tu ruta fue generada.`, "ok") : ""}
       <section class="tarjeta" style="margin-top:10px">
         <p class="tarjeta__titulo">Reporte N.º ${Number(id)}</p>
         <div class="progreso__textos"><span>Progreso</span><span>${Number(datos.progreso)} %</span></div>
         <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Number(datos.progreso)}">
           <div class="barra__relleno" style="width:${Number(datos.progreso)}%"></div></div>
-        <button id="btnExportar" class="boton boton--sec">${icono("i-download")} Exportar PDF</button>
+        ${App.puede("exportar_pdf") ? `<button id="btnExportar" class="boton boton--sec">${icono("i-download")} Exportar PDF</button>` : ""}
         <div id="mensajes"></div>
       </section>
       <section class="tarjeta" style="margin-top:12px">
@@ -173,7 +177,8 @@
       } catch (error) { b.disabled = false; alFallar(error, raiz.querySelector("#mensajes")); }
     }));
 
-    raiz.querySelector("#btnExportar").addEventListener("click", async (e) => {
+    const botonExportar = raiz.querySelector("#btnExportar");
+    if (botonExportar) botonExportar.addEventListener("click", async (e) => {
       const boton = e.currentTarget;
       boton.disabled = true;
       try {
@@ -191,7 +196,6 @@
 
   function dibujar() {
     if (!App.api.token) return App.mostrarAcceso();
-    if (pestana !== "historial") pestana = "cargar";
     dibujarPanel();
   }
 

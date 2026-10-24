@@ -5,7 +5,7 @@ y las clases de Python que ya hicimos. Cada opción del menú de main.py
 tiene aquí un "endpoint" (una dirección web) que llama a la MISMA lógica:
 
     main.py                      ->  servidor.py (dirección web)
-    1. Registrarse               ->  POST /api/registro
+    1. Registrarse               ->  POST /api/admin/usuarios   (solo administrador)
     2. Iniciar sesión            ->  POST /api/login
     1. Cargar PDF (+ palabras)   ->  POST /api/reportes
     2. Historial                 ->  GET  /api/reportes
@@ -13,6 +13,14 @@ tiene aquí un "endpoint" (una dirección web) que llama a la MISMA lógica:
     4. Marcar actividad          ->  POST /api/reportes/<id>/actividades/<n>/cumplir
     5. Exportar PDF              ->  GET  /api/reportes/<id>/pdf
     (palabras clave de un reporte) GET  /api/reportes/<id>/palabras
+
+Control de acceso (todo se decide AQUÍ, en el servidor; el navegador solo muestra u oculta):
+  - Cada solicitud trae un token. El token apunta a un id de usuario y el usuario se vuelve
+    a leer de la base de datos en CADA solicitud (rol, permisos y si sigue activo).
+  - Administrador = rol "administrador" y correo hydisa123@gmail.com (ver modelos.Usuario).
+  - Rutas /api/admin/*  -> solo administrador (403 para cualquier otro).
+  - Cada operación con reportes exige un permiso concreto (config.PERMISOS).
+  - No existe registro público: las cuentas las crea el administrador.
 
 Solo usa la biblioteca estándar de Python: no hay que instalar nada nuevo.
 """
@@ -29,7 +37,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from hydisa.base_datos import BaseDatos
-from hydisa.config import RAIZ, RUTA_BD, TAMANO_MAXIMO_MB
+from hydisa.config import CORREO_ADMIN, PERMISOS, RAIZ, RUTA_BD, TAMANO_MAXIMO_MB
 from hydisa.excepciones import ArchivoInvalidoError, CredencialesError, HydisaError
 from hydisa.servicio_reportes import ServicioReportes
 from hydisa.servicio_usuarios import ServicioUsuarios
@@ -54,7 +62,7 @@ class Aplicacion:
         self.bd = bd
         self.usuarios = ServicioUsuarios(bd)
         self.reportes = ServicioReportes(bd)
-        self.sesiones = {}                  # token -> Usuario
+        self.sesiones = {}                  # token -> id de usuario (el usuario se relee en cada solicitud)
 
 
 class Manejador(BaseHTTPRequestHandler):
@@ -99,14 +107,28 @@ class Manejador(BaseHTTPRequestHandler):
     def _usuario_actual(self):
         encabezado = self.headers.get("Authorization", "")
         token = encabezado[7:] if encabezado.startswith("Bearer ") else ""
-        usuario = self.app.sesiones.get(token)
+        usuario_id = self.app.sesiones.get(token)
+        usuario = self.app.usuarios.obtener(usuario_id, solo_activos=True) if usuario_id else None
         if usuario is None:
+            self.app.sesiones.pop(token, None)          # cuenta desactivada o token inventado
             raise RespuestaError(401, "Debes iniciar sesión.")
         return usuario
 
     @staticmethod
+    def _exigir_permiso(usuario, permiso):
+        if not usuario.tiene_permiso(permiso):
+            raise RespuestaError(403, "Tu cuenta no tiene permiso para esta acción.")
+
+    @staticmethod
+    def _exigir_admin(usuario):
+        if not usuario.es_administrador():
+            raise RespuestaError(403, "Solo el administrador puede hacer esto.")
+
+    @staticmethod
     def _serializar_usuario(u):
-        return {"id": u.id, "nombre": u.nombre, "correo": u.correo, "rol": u.rol}
+        admin = u.es_administrador()
+        return {"id": u.id, "nombre": u.nombre, "correo": u.correo, "rol": u.rol,
+                "es_admin": admin, "permisos": list(PERMISOS) if admin else list(u.permisos)}
 
     def _serializar_ruta(self, usuario, reporte_id):
         items = self.app.reportes.obtener_ruta(usuario, reporte_id)
@@ -166,16 +188,11 @@ class Manejador(BaseHTTPRequestHandler):
         app = self.app
         partes = ruta.split("/")
 
-        if (metodo, ruta) == ("POST", "registro"):                       # main: 1. Registrarse
-            d = self._leer_json()
-            u = app.usuarios.registrar(d.get("nombre", ""), d.get("correo", ""), d.get("clave", ""))
-            return self._enviar_json({"usuario": self._serializar_usuario(u)}, 201)
-
         if (metodo, ruta) == ("POST", "login"):                          # main: 2. Iniciar sesión
             d = self._leer_json()
             u = app.usuarios.iniciar_sesion(d.get("correo", ""), d.get("clave", ""))
             token = secrets.token_urlsafe(32)
-            app.sesiones[token] = u
+            app.sesiones[token] = u.id
             return self._enviar_json({"token": token, "usuario": self._serializar_usuario(u)})
 
         if (metodo, ruta) == ("POST", "logout"):                         # main: 0. Salir
@@ -188,32 +205,91 @@ class Manejador(BaseHTTPRequestHandler):
         if (metodo, ruta) == ("GET", "yo"):
             return self._enviar_json({"usuario": self._serializar_usuario(usuario)})
 
+        if partes[0] == "admin":                                         # solo administrador
+            self._exigir_admin(usuario)
+            return self._api_admin(metodo, partes[1:])
+
         if (metodo, ruta) == ("GET", "reportes"):                        # 2. Historial
+            self._exigir_permiso(usuario, "ver_reportes")
             filas = app.reportes.historial(usuario)
             return self._enviar_json({"reportes": [
                 {"id": f["id"], "nombre_archivo": f["nombre_archivo"], "creado_en": str(f["creado_en"])}
                 for f in filas]})
 
         if (metodo, ruta) == ("POST", "reportes"):                       # 1. Cargar PDF
+            if not usuario.tiene_permiso("cargar_pdf"):
+                self.rfile.read(min(int(self.headers.get("Content-Length") or 0), LIMITE_CUERPO))
+            self._exigir_permiso(usuario, "cargar_pdf")
             return self._cargar_pdf(usuario)
 
         if len(partes) >= 3 and partes[0] == "reportes" and partes[1].isdigit():
             reporte_id, resto = int(partes[1]), partes[2:]
 
             if metodo == "GET" and resto == ["ruta"]:                    # 3. Ver ruta
+                self._exigir_permiso(usuario, "ver_reportes")
                 return self._enviar_json(self._serializar_ruta(usuario, reporte_id))
 
             if metodo == "GET" and resto == ["palabras"]:
+                self._exigir_permiso(usuario, "ver_reportes")
                 return self._enviar_json({"palabras": self._palabras_de(usuario, reporte_id)})
 
             if metodo == "POST" and len(resto) == 3 and resto[0] == "actividades" \
                     and resto[1].isdigit() and resto[2] == "cumplir":    # 4. Marcar actividad
+                self._exigir_permiso(usuario, "marcar_actividades")
                 app.reportes.marcar_cumplida(usuario, reporte_id, int(resto[1]))
                 return self._enviar_json(self._serializar_ruta(usuario, reporte_id))
 
             if metodo == "GET" and resto == ["pdf"]:                     # 5. Exportar PDF
+                self._exigir_permiso(usuario, "exportar_pdf")
                 destino = app.reportes.exportar_pdf(usuario, reporte_id)
                 return self._enviar_bytes(Path(destino).read_bytes(), "application/pdf", Path(destino).name)
+
+        raise RespuestaError(404, "Ruta de la API no encontrada.")
+
+    def _api_admin(self, metodo, partes):
+        """Rutas /api/admin/... (el rol ya fue comprobado antes de llegar aquí)."""
+        app = self.app
+        if partes[:1] != ["usuarios"]:
+            raise RespuestaError(404, "Ruta de la API no encontrada.")
+        partes = partes[1:]
+
+        if not partes and metodo == "GET":                               # listado de usuarios
+            return self._enviar_json({
+                "usuarios": [{**u, "es_admin": u["rol"] == "administrador" and u["correo"] == CORREO_ADMIN,
+                              "permisos": list(PERMISOS) if u["rol"] == "administrador" and u["correo"] == CORREO_ADMIN
+                              else u["permisos"]} for u in app.usuarios.listar()],
+                "catalogo": [{"clave": k, "nombre": v} for k, v in PERMISOS.items()]})
+
+        if not partes and metodo == "POST":                              # crear usuario (+ permisos)
+            d = self._leer_json()
+            # Siempre rol "usuario": el campo "rol" que mande el cliente se ignora.
+            nuevo = app.usuarios.registrar(d.get("nombre", ""), d.get("correo", ""), d.get("clave", ""),
+                                           rol="usuario", permisos=d.get("permisos", []))
+            return self._enviar_json({"usuario": self._serializar_usuario(nuevo)}, 201)
+
+        if partes and partes[0].isdigit():
+            destino = app.usuarios.obtener(int(partes[0]))
+            if destino is None:
+                raise RespuestaError(404, "Ese usuario no existe.")
+            resto = partes[1:]
+
+            if metodo == "GET" and not resto:                            # detalle de un usuario
+                filas = app.reportes.historial(destino)
+                return self._enviar_json({
+                    "usuario": self._serializar_usuario(destino),
+                    "reportes": [{"id": f["id"], "nombre_archivo": f["nombre_archivo"],
+                                  "creado_en": str(f["creado_en"])} for f in filas]})
+
+            if metodo == "POST" and resto == ["permisos"]:               # cambiar permisos
+                d = self._leer_json()
+                actualizado = app.usuarios.actualizar_permisos(destino.id, d.get("permisos"))
+                return self._enviar_json({"usuario": self._serializar_usuario(actualizado)})
+
+            if metodo == "GET" and len(resto) == 2 and resto[0] == "reportes" and resto[1].isdigit():
+                rid = int(resto[1])                                      # ver un reporte ajeno
+                datos = self._serializar_ruta(destino, rid)
+                datos["palabras"] = self._palabras_de(destino, rid)
+                return self._enviar_json(datos)
 
         raise RespuestaError(404, "Ruta de la API no encontrada.")
 
@@ -263,6 +339,11 @@ def crear_servidor(bd, puerto=PUERTO, host="127.0.0.1"):
 def main():
     bd = BaseDatos(RUTA_BD)
     servidor = crear_servidor(bd)
+    clave_admin = os.getenv("ADMIN_CLAVE", "")
+    if clave_admin:
+        print(f"Cuenta de administrador ({CORREO_ADMIN}): {Manejador.app.usuarios.asegurar_administrador(clave_admin)}.")
+    elif not bd.consultar_uno("SELECT id FROM usuarios WHERE correo = ?", (CORREO_ADMIN,)):
+        print("AVISO: no existe el administrador. Agrega ADMIN_CLAVE=tu_clave al archivo .env y reinicia.")
     tipo = "PostgreSQL (Supabase)" if bd.es_postgres else "SQLite local"
     print(f"HYDISA listo con base de datos {tipo}.")
     print(f"Abre en el navegador:  http://127.0.0.1:{PUERTO}")

@@ -67,6 +67,7 @@ App.SECCIONES = [
   { id: "registro",       nombre: "Registro",       icono: "i-book",     navegacion: true },
   { id: "evolucion",      nombre: "Evolución",      icono: "i-chart",    navegacion: true },
   { id: "perfil",         nombre: "Perfil",         icono: "i-user",     navegacion: true },
+  { id: "admin",          nombre: "Administración", icono: "i-shield",   navegacion: false, soloAdmin: true },
   { id: "analisis",       nombre: "Mi análisis",    icono: "i-file",     navegacion: false },
   { id: "calendario",     nombre: "Calendario",     icono: "i-calendar", navegacion: false },
   { id: "acompanamiento", nombre: "Acompañamiento", icono: "i-heart",    navegacion: false },
