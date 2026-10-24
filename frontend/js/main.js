@@ -1,9 +1,8 @@
 /* ==================================================================
    MAIN: ARRANQUE DE LA APLICACIÓN
-   Para qué sirve: lee lo guardado, dibuja la navegación y la primera
-   pantalla. Es lo último que se carga.
+   Para qué sirve: dibuja la navegación y deja que el MÓDULO 0 (acceso)
+   decida qué se ve primero: la pantalla de inicio de sesión o la app.
+   Es lo último que se carga.
    ================================================================== */
-App.cargar();
-App.refrescarCabecera();
 App.pintarNavegacion();
-App.mostrar();
+App.iniciarAcceso();

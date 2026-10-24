@@ -6,7 +6,9 @@
    OJO: por ahora los datos quedan SOLO en este navegador. Para tenerlos
    en cualquier dispositivo hay que conectarlos a la base de datos.
    ================================================================== */
-const CLAVE_GUARDADO = "hydisa_estado_v1";
+const CLAVE_BASE = "hydisa_estado_v1";
+/* Cada cuenta tiene su propio guardado: si otra persona entra en el mismo computador, no ve tus datos */
+const CLAVE_GUARDADO_ACTUAL = () => CLAVE_BASE + (App.api && App.api.usuario ? "_u" + App.api.usuario.id : "");
 const TOTAL_DIAS = App.ACTIVIDADES.length;
 
 /* Fecha de hoy como texto "2026-10-22" (en la hora local de la persona) */
@@ -31,7 +33,7 @@ function estadoInicial() {
 /* Lee lo guardado (si no hay nada o falla, empieza desde cero) */
 App.cargar = () => {
   try {
-    const guardado = localStorage.getItem(CLAVE_GUARDADO);
+    const guardado = localStorage.getItem(CLAVE_GUARDADO_ACTUAL());
     App.estado = guardado ? { ...estadoInicial(), ...JSON.parse(guardado) } : estadoInicial();
   } catch (error) {
     App.estado = estadoInicial();
@@ -40,7 +42,7 @@ App.cargar = () => {
 
 /* Guarda el estado y refresca la cabecera (saludo y punto rojo) */
 App.guardar = () => {
-  try { localStorage.setItem(CLAVE_GUARDADO, JSON.stringify(App.estado)); } catch (error) { /* sin almacenamiento: sigue en memoria */ }
+  try { localStorage.setItem(CLAVE_GUARDADO_ACTUAL(), JSON.stringify(App.estado)); } catch (error) { /* sin almacenamiento: sigue en memoria */ }
   if (App.refrescarCabecera) App.refrescarCabecera();
 };
 
@@ -88,7 +90,7 @@ App.reiniciarRuta = () => {
 
 /* Borra TODO lo guardado y vuelve al estado inicial */
 App.borrarTodo = () => {
-  try { localStorage.removeItem(CLAVE_GUARDADO); } catch (error) { /* nada */ }
+  try { localStorage.removeItem(CLAVE_GUARDADO_ACTUAL()); } catch (error) { /* nada */ }
   App.estado = estadoInicial();
   App.guardar();
 };

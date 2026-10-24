@@ -315,3 +315,29 @@ ol, ul { list-style: none; }
 .analisis-acceso { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin-bottom: 12px; }
 .analisis-acceso small { color: var(--texto-suave); }
 .boton:disabled { opacity: .6; cursor: default; }
+
+/* ---------- MÓDULO 0: PANTALLA DE ACCESO (antes de toda la app) ---------- */
+.sin-sesion .app, .sin-sesion .panel, .sin-sesion .velo { display: none !important; }
+.acceso-pantalla {
+  position: fixed; inset: 0; z-index: 50; overflow-y: auto;
+  background:
+    radial-gradient(circle at 0% 0%,  rgba(120,160,110,.35), transparent 45%),
+    radial-gradient(circle at 100% 100%, rgba(120,160,110,.30), transparent 45%),
+    var(--fondo);
+}
+.acceso-pantalla[hidden] { display: none; }
+.acceso__marco { max-width: 400px; min-height: 100%; margin: 0 auto; padding: 28px 20px 24px; display: flex; flex-direction: column; justify-content: center; }
+.acceso__logo { width: 150px; height: 150px; display: block; margin: 0 auto 8px; filter: drop-shadow(0 6px 14px rgba(40,90,90,.18)); }
+.acceso__titulo { text-align: center; font-size: 1.7rem; font-weight: 500; color: var(--verde-oscuro); }
+.acceso__lema { text-align: center; color: var(--texto-suave); margin: 4px 0 18px; }
+.acceso__tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); box-shadow: var(--sombra); padding: 18px; display: grid; gap: 12px; }
+.acceso__tarjeta input { font: inherit; color: var(--texto); width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--borde); background: #fff; }
+.acceso__tarjeta input:focus { outline: 2px solid var(--verde-medio); outline-offset: 1px; }
+.acceso__tarjeta .boton { margin-top: 0; }
+.acceso__clave { position: relative; }
+.acceso__clave input { padding-right: 52px; }
+.acceso__clave .icono-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+.acceso__o { display: flex; align-items: center; gap: 10px; color: var(--texto-suave); font-size: .85rem; }
+.acceso__o::before, .acceso__o::after { content: ""; flex: 1; height: 1px; background: var(--borde); }
+.acceso__pie { text-align: center; margin-top: 16px; }
+.acceso__tarjeta .mensaje[hidden] { display: none; }

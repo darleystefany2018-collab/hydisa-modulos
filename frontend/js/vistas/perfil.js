@@ -21,6 +21,7 @@ App.vistas.perfil = {
       <section class="tarjeta">
         <p><strong>${App.diasCompletados()}</strong> de ${TOTAL_DIAS} días completados · <strong>${e.registros.length}</strong> registros · <strong>${e.sesiones.length}</strong> sesiones</p>
       </section>
+      <button id="btnCerrarSesion" class="boton boton--sec">Cerrar sesión</button>
       <button id="btnReiniciar" class="boton boton--sec">Reiniciar mi ruta</button>
       <button id="btnBorrar" class="boton boton--peligro">Borrar todos mis datos</button>
       <p class="texto-chico" style="text-align:center;margin-top:12px">HYDISA no emite diagnósticos ni recomendaciones médicas.</p>`;
@@ -34,6 +35,7 @@ App.vistas.perfil = {
       App.aviso("Nombre actualizado");
     });
     c.querySelector("#btnIntencionPerfil").addEventListener("click", () => App.abrirIntencion());
+    c.querySelector("#btnCerrarSesion").addEventListener("click", () => App.cerrarSesionCompleta());
     c.querySelector("#btnReiniciar").addEventListener("click", () => {
       if (confirm("¿Reiniciar tu ruta desde el día 1? Tus registros y sesiones se conservan.")) {
         App.reiniciarRuta(); App.aviso("Ruta reiniciada"); App.navegar("inicio");

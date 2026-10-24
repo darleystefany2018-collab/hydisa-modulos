@@ -23,7 +23,7 @@
     raiz.innerHTML = `
       <section class="tarjeta">
         <p class="tarjeta__titulo">Falta encender HYDISA</p>
-        <p class="texto-suave">Esta pantalla necesita el servidor de Python. Cierra esta pestaña y abre la app con doble clic en <strong>iniciar_hydisa.bat</strong> (está en la carpeta del proyecto).</p>
+        <p class="texto-suave">Esta pantalla necesita el servidor de Python. Ábrela con el acceso directo o con <strong>iniciar_hydisa.bat</strong> y pulsa Reintentar.</p>
         <button id="btnReintentar" class="boton boton--sec">Reintentar</button>
       </section>`;
     raiz.querySelector("#btnReintentar").addEventListener("click", dibujar);
@@ -32,53 +32,9 @@
   /* Maneja un error: sin servidor, sesión vencida o mensaje normal */
   const alFallar = (error, zonaMensajes) => {
     if (error.sinServidor) return sinServidor();
-    if (error.sesionVencida) { App.aviso("Tu sesión terminó. Entra otra vez."); return dibujar(); }
+    if (error.sesionVencida) return App.mostrarAcceso("Tu sesión terminó. Entra otra vez.");
     zonaMensajes.innerHTML = msg(error.message);
   };
-
-  /* ---------- Sin sesión: entrar / crear cuenta (main.py 1 y 2) ---------- */
-  function dibujarAcceso() {
-    const entrar = pestana !== "crear";
-    raiz.innerHTML = `
-      <div class="pestanas">
-        <button class="pestana ${entrar ? "pestana--activa" : ""}" data-p="entrar">Entrar</button>
-        <button class="pestana ${!entrar ? "pestana--activa" : ""}" data-p="crear">Crear cuenta</button>
-      </div>
-      <form id="formAcceso" class="tarjeta" novalidate>
-        ${entrar ? "" : `<label class="campo"><span>Nombre</span><input name="nombre" type="text" autocomplete="name" required></label>`}
-        <label class="campo"><span>Correo</span><input name="correo" type="email" autocomplete="email" required></label>
-        <label class="campo"><span>Contraseña${entrar ? "" : " (mínimo 8 caracteres)"}</span>
-          <input name="clave" type="password" autocomplete="${entrar ? "current-password" : "new-password"}" required></label>
-        <div id="mensajes"></div>
-        <button class="boton" type="submit">${entrar ? "Entrar" : "Crear cuenta"}</button>
-      </form>
-      <p class="texto-chico" style="text-align:center;margin-top:12px">Tus datos se guardan en la base de datos de HYDISA, con la contraseña protegida.</p>`;
-
-    raiz.querySelectorAll(".pestana").forEach((b) =>
-      b.addEventListener("click", () => { pestana = b.dataset.p; dibujarAcceso(); }));
-
-    raiz.querySelector("#formAcceso").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const f = new FormData(e.target);
-      const zona = raiz.querySelector("#mensajes");
-      const boton = e.target.querySelector("button[type=submit]");
-      boton.disabled = true;
-      try {
-        const correo = f.get("correo"), clave = f.get("clave");
-        if (!entrar) await App.api.registrar(f.get("nombre"), correo, clave);
-        const usuario = await App.api.iniciarSesion(correo, clave);
-        /* El saludo de la cabecera usa el nombre real de la cuenta */
-        App.estado.usuario.nombre = usuario.nombre.split(" ")[0];
-        App.agregarNotificacion(entrar ? "Iniciaste sesión en HYDISA." : "¡Cuenta creada! Ya puedes cargar tu primer PDF.");
-        App.guardar();
-        pestana = "cargar";
-        dibujar();
-      } catch (error) {
-        boton.disabled = false;
-        alFallar(error, zona);
-      }
-    });
-  }
 
   /* ---------- Con sesión: panel principal ---------- */
   function dibujarPanel() {
@@ -95,10 +51,7 @@
       <div id="zona"></div>`;
 
     raiz.querySelector("#btnSalir").addEventListener("click", async () => {
-      await App.api.cerrarSesion();
-      pestana = "entrar";
-      App.aviso("Sesión cerrada");
-      dibujar();
+      await App.cerrarSesionCompleta();
     });
     raiz.querySelectorAll(".pestana").forEach((b) =>
       b.addEventListener("click", () => { pestana = b.dataset.p; dibujarPanel(); }));
@@ -237,8 +190,9 @@
   }
 
   function dibujar() {
-    if (!App.api.token) { if (pestana !== "crear") pestana = "entrar"; dibujarAcceso(); }
-    else { if (pestana !== "historial") pestana = "cargar"; dibujarPanel(); }
+    if (!App.api.token) return App.mostrarAcceso();
+    if (pestana !== "historial") pestana = "cargar";
+    dibujarPanel();
   }
 
   App.vistas.analisis = {
