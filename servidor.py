@@ -21,6 +21,13 @@ Control de acceso (todo se decide AQUÍ, en el servidor; el navegador solo muest
   - Rutas /api/admin/*  -> solo administrador (403 para cualquier otro).
   - Cada operación con reportes exige un permiso concreto (config.PERMISOS).
   - No existe registro público: las cuentas las crea el administrador.
+  - Separación de roles: el administrador SOLO gestiona (cuentas, usuarios, reportes ajenos, agenda
+    y alertas SOS). Las rutas de acompañamiento (/api/reportes, /api/sesiones, /api/sos) le responden 403.
+    A los demás usuarios, todo lo de /api/admin/* les responde 403.
+  - Disponibilidad: el administrador publica un rango libre (o todo el día) que se divide en bloques de
+    30 min (/api/admin/agenda); los usuarios
+    reservan solo bloques publicados y libres (/api/sesiones). SOS: POST /api/sos crea una alerta que
+    el administrador ve y marca como atendida (/api/admin/alertas).
 
 Solo usa la biblioteca estándar de Python: no hay que instalar nada nuevo.
 """
@@ -37,9 +44,14 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from hydisa.base_datos import BaseDatos
-from hydisa.config import CORREO_ADMIN, PERMISOS, RAIZ, RUTA_BD, TAMANO_MAXIMO_MB
-from hydisa.excepciones import ArchivoInvalidoError, CredencialesError, HydisaError
+from hydisa.config import (CORREO_ADMIN, DURACION_MAXIMA_SESION_MIN, DURACION_SESION_MIN, HORA_APERTURA, HORA_CIERRE,
+                           PERMISOS, RAIZ, RUTA_BD, TAMANO_MAXIMO_MB)
+from hydisa.excepciones import (ArchivoInvalidoError, CredencialesError, HorarioNoDisponibleError, HydisaError,
+                                PermisoDenegadoError)
+from hydisa.servicio_alertas import ServicioAlertas
 from hydisa.servicio_reportes import ServicioReportes
+from hydisa.servicio_sesiones import ServicioSesiones
+from hydisa.tiempo import a_iso_utc
 from hydisa.servicio_usuarios import ServicioUsuarios
 
 CARPETA_FRONTEND = RAIZ / "frontend"
@@ -62,6 +74,8 @@ class Aplicacion:
         self.bd = bd
         self.usuarios = ServicioUsuarios(bd)
         self.reportes = ServicioReportes(bd)
+        self.agenda = ServicioSesiones(bd)
+        self.alertas = ServicioAlertas(bd)
         self.sesiones = {}                  # token -> id de usuario (el usuario se relee en cada solicitud)
 
 
@@ -100,9 +114,12 @@ class Manejador(BaseHTTPRequestHandler):
         if largo > 100_000:
             raise RespuestaError(413, "Solicitud demasiado grande.")
         try:
-            return json.loads(self.rfile.read(largo) or b"{}")
+            datos = json.loads(self.rfile.read(largo) or b"{}")
         except json.JSONDecodeError as error:
             raise RespuestaError(400, "El cuerpo no es JSON válido.") from error
+        if not isinstance(datos, dict):
+            raise RespuestaError(400, "El cuerpo debe ser un objeto JSON.")
+        return datos
 
     def _usuario_actual(self):
         encabezado = self.headers.get("Authorization", "")
@@ -116,8 +133,16 @@ class Manejador(BaseHTTPRequestHandler):
 
     @staticmethod
     def _exigir_permiso(usuario, permiso):
+        if usuario.es_administrador():
+            raise RespuestaError(403, "El administrador solo tiene funciones de gestión.")
         if not usuario.tiene_permiso(permiso):
             raise RespuestaError(403, "Tu cuenta no tiene permiso para esta acción.")
+
+    @staticmethod
+    def _exigir_no_admin(usuario):
+        """Sesiones y SOS son para usuarios; el administrador solo gestiona."""
+        if usuario.es_administrador():
+            raise RespuestaError(403, "El administrador solo tiene funciones de gestión.")
 
     @staticmethod
     def _exigir_admin(usuario):
@@ -128,7 +153,7 @@ class Manejador(BaseHTTPRequestHandler):
     def _serializar_usuario(u):
         admin = u.es_administrador()
         return {"id": u.id, "nombre": u.nombre, "correo": u.correo, "rol": u.rol,
-                "es_admin": admin, "permisos": list(PERMISOS) if admin else list(u.permisos)}
+                "es_admin": admin, "permisos": [] if admin else list(u.permisos)}
 
     def _serializar_ruta(self, usuario, reporte_id):
         items = self.app.reportes.obtener_ruta(usuario, reporte_id)
@@ -173,6 +198,10 @@ class Manejador(BaseHTTPRequestHandler):
             self._enviar_json({"error": str(error)}, error.codigo)
         except CredencialesError as error:
             self._enviar_json({"error": str(error)}, 401)
+        except PermisoDenegadoError as error:
+            self._enviar_json({"error": str(error)}, 403)
+        except HorarioNoDisponibleError as error:
+            self._enviar_json({"error": str(error)}, 409)
         except HydisaError as error:
             self._enviar_json({"error": str(error)}, 400)
         except IndexError as error:
@@ -209,11 +238,31 @@ class Manejador(BaseHTTPRequestHandler):
             self._exigir_admin(usuario)
             return self._api_admin(metodo, partes[1:])
 
+        if partes[0] == "sesiones":                                      # acompañamiento: agenda
+            self._exigir_no_admin(usuario)
+            if (metodo, partes) == ("GET", ["sesiones"]):
+                return self._enviar_json({"disponibles": app.agenda.disponibles(usuario),
+                                          "mias": app.agenda.mias(usuario)})
+            if metodo == "POST" and len(partes) == 3 and partes[1].isdigit() and partes[2] in ("reservar", "cancelar"):
+                if partes[2] == "reservar":
+                    bloque = app.agenda.reservar(usuario, int(partes[1]), self._leer_json().get("tema", ""))
+                else:
+                    bloque = app.agenda.cancelar(usuario, int(partes[1]))
+                return self._enviar_json({"bloque": bloque})
+
+        if partes[0] == "sos":                                           # botón SOS
+            self._exigir_no_admin(usuario)
+            if (metodo, partes) == ("GET", ["sos"]):
+                return self._enviar_json({"pendiente": app.alertas.pendiente_de(usuario)})
+            if (metodo, partes) == ("POST", ["sos"]):
+                alerta, nueva = app.alertas.crear(usuario, self._leer_json().get("mensaje", ""))
+                return self._enviar_json({"alerta": alerta, "nueva": nueva}, 201 if nueva else 200)
+
         if (metodo, ruta) == ("GET", "reportes"):                        # 2. Historial
             self._exigir_permiso(usuario, "ver_reportes")
             filas = app.reportes.historial(usuario)
             return self._enviar_json({"reportes": [
-                {"id": f["id"], "nombre_archivo": f["nombre_archivo"], "creado_en": str(f["creado_en"])}
+                {"id": f["id"], "nombre_archivo": f["nombre_archivo"], "creado_en": a_iso_utc(f["creado_en"])}
                 for f in filas]})
 
         if (metodo, ruta) == ("POST", "reportes"):                       # 1. Cargar PDF
@@ -249,15 +298,43 @@ class Manejador(BaseHTTPRequestHandler):
     def _api_admin(self, metodo, partes):
         """Rutas /api/admin/... (el rol ya fue comprobado antes de llegar aquí)."""
         app = self.app
+        admin = self._usuario_actual()
+        if partes[:1] == ["alertas"]:                                    # alertas SOS
+            if metodo == "GET" and len(partes) == 1:
+                pendientes, atendidas = app.alertas.listar(admin)
+                return self._enviar_json({"pendientes": pendientes, "atendidas": atendidas})
+            if metodo == "POST" and len(partes) == 3 and partes[1].isdigit() and partes[2] == "atender":
+                return self._enviar_json({"alerta": app.alertas.atender(admin, int(partes[1]))})
+            raise RespuestaError(404, "Ruta de la API no encontrada.")
+
+        if partes[:1] == ["agenda"]:                                     # disponibilidad horaria
+            if metodo == "GET" and len(partes) == 1:
+                return self._enviar_json({"bloques": app.agenda.listar_agenda(admin),
+                                          "duracion_maxima": DURACION_MAXIMA_SESION_MIN,
+                                          "duracion_sesion": DURACION_SESION_MIN,
+                                          "apertura": HORA_APERTURA, "cierre": HORA_CIERRE})
+            if metodo == "POST" and len(partes) == 1:
+                d = self._leer_json()
+                for campo in ("todo_el_dia", "reemplazar"):                  # deben ser true/false de verdad
+                    if not isinstance(d.get(campo, False), bool):
+                        raise RespuestaError(400, f"«{campo}» debe ser true o false.")
+                r = app.agenda.publicar_rango(admin, d.get("fecha"), d.get("inicio"), d.get("fin"),
+                                              todo_el_dia=d.get("todo_el_dia", False), reemplazar=d.get("reemplazar", False))
+                # "bloque" (el primero) se conserva por compatibilidad con quien publicaba un solo bloque
+                return self._enviar_json({"bloque": r["creados"][0], "bloques": r["creados"], **{k: v for k, v in r.items() if k != "creados"}}, 201)
+            if metodo == "POST" and len(partes) == 3 and partes[1].isdigit() and partes[2] == "eliminar":
+                app.agenda.eliminar_bloque(admin, int(partes[1]))
+                return self._enviar_json({"ok": True})
+            raise RespuestaError(404, "Ruta de la API no encontrada.")
+
         if partes[:1] != ["usuarios"]:
             raise RespuestaError(404, "Ruta de la API no encontrada.")
         partes = partes[1:]
 
         if not partes and metodo == "GET":                               # listado de usuarios
             return self._enviar_json({
-                "usuarios": [{**u, "es_admin": u["rol"] == "administrador" and u["correo"] == CORREO_ADMIN,
-                              "permisos": list(PERMISOS) if u["rol"] == "administrador" and u["correo"] == CORREO_ADMIN
-                              else u["permisos"]} for u in app.usuarios.listar()],
+                "usuarios": [{**u, "es_admin": u["rol"] == "administrador" and u["correo"] == CORREO_ADMIN}
+                             for u in app.usuarios.listar()],
                 "catalogo": [{"clave": k, "nombre": v} for k, v in PERMISOS.items()]})
 
         if not partes and metodo == "POST":                              # crear usuario (+ permisos)
@@ -278,7 +355,7 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._enviar_json({
                     "usuario": self._serializar_usuario(destino),
                     "reportes": [{"id": f["id"], "nombre_archivo": f["nombre_archivo"],
-                                  "creado_en": str(f["creado_en"])} for f in filas]})
+                                  "creado_en": a_iso_utc(f["creado_en"])} for f in filas]})
 
             if metodo == "POST" and resto == ["permisos"]:               # cambiar permisos
                 d = self._leer_json()

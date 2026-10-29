@@ -21,6 +21,8 @@
     if (App.cerrarHoja) App.cerrarHoja();
     if (App.abrirMenu) App.abrirMenu(false);
     mostrarPantalla(true);
+    document.body.classList.remove("rol-admin");
+    $("btnSOS").hidden = true;
     dibujar(aviso);
   };
 
@@ -29,9 +31,13 @@
     App.cargar();                               // carga los datos de ESTA cuenta
     if (App.estado.usuario.nombre === "Ana") App.estado.usuario.nombre = App.api.usuario.nombre.split(" ")[0];
     App.guardar();
-    App.pintarNavegacion();                     // el menú muestra "Administración" solo si es administrador
+    App.pintarNavegacion();                     // el menú depende del rol
     mostrarPantalla(false);
-    if (location.hash !== "#/inicio" && location.hash !== "") location.hash = "#/inicio";
+    const admin = App.esAdmin();
+    document.body.classList.toggle("rol-admin", admin);   // el administrador no tiene campana de notificaciones
+    $("btnSOS").hidden = admin;                           // SOS es solo para usuarios
+    const destino = admin ? "#/admin" : "#/inicio";
+    if (location.hash !== destino) location.hash = destino;
     App.mostrar();
   };
 

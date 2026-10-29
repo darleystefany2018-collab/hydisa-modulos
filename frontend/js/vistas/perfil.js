@@ -19,7 +19,7 @@ App.vistas.perfil = {
         <button id="btnIntencionPerfil" class="enlace">Cambiar intención ${icono("i-chevron", "icono icono--mini")}</button>
       </section>
       <section class="tarjeta">
-        <p><strong>${App.diasCompletados()}</strong> de ${TOTAL_DIAS} días completados · <strong>${e.registros.length}</strong> registros · <strong>${e.sesiones.length}</strong> sesiones</p>
+        <p><strong>${App.diasCompletados()}</strong> de ${TOTAL_DIAS} días completados · <strong>${e.registros.length}</strong> registros</p>
       </section>
       <button id="btnCerrarSesion" class="boton boton--sec">Cerrar sesión</button>
       <button id="btnReiniciar" class="boton boton--sec">Reiniciar mi ruta</button>
@@ -37,7 +37,7 @@ App.vistas.perfil = {
     c.querySelector("#btnIntencionPerfil").addEventListener("click", () => App.abrirIntencion());
     c.querySelector("#btnCerrarSesion").addEventListener("click", () => App.cerrarSesionCompleta());
     c.querySelector("#btnReiniciar").addEventListener("click", () => {
-      if (confirm("¿Reiniciar tu ruta desde el día 1? Tus registros y sesiones se conservan.")) {
+      if (confirm("¿Reiniciar tu ruta desde el día 1? Tus registros se conservan.")) {
         App.reiniciarRuta(); App.aviso("Ruta reiniciada"); App.navegar("inicio");
       }
     });

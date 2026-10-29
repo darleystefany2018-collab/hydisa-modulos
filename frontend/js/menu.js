@@ -7,13 +7,17 @@
 
 /* Dibuja la barra inferior y la lista del menú lateral */
 App.pintarNavegacion = () => {
-  $("navegacion").innerHTML = App.SECCIONES.filter((s) => s.navegacion).map((s) => `
+  /* Administrador: solo Administración. Usuarios: todas las secciones, menos la de gestión. */
+  const secciones = App.SECCIONES.filter((s) => App.esAdmin() ? s.soloAdmin : !s.soloAdmin);
+  $("navegacion").innerHTML = secciones.filter((s) => s.navegacion || s.soloAdmin).map((s) => `
     <button class="nav__item" data-ir="${s.id}" data-nav="${s.id}">
       ${icono(s.icono)}<span>${s.nombre}</span>
     </button>`).join("");
 
-  $("listaMenu").innerHTML = App.SECCIONES.filter((s) => !s.soloAdmin || App.esAdmin()).map((s) => `
-    <li><button data-ir="${s.id}">${icono(s.icono)} ${s.nombre}</button></li>`).join("");
+  $("listaMenu").innerHTML = secciones.map((s) => `
+    <li><button data-ir="${s.id}">${icono(s.icono)} ${s.nombre}</button></li>`).join("")
+    + `<li><button id="menuSalir">${icono("i-close")} Cerrar sesión</button></li>`;
+  $("menuSalir").addEventListener("click", () => { App.abrirMenu(false); App.cerrarSesionCompleta(); });
 };
 
 /* Marca como activa la pestaña de la pantalla actual */

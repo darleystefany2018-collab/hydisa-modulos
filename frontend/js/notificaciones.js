@@ -6,7 +6,7 @@
 
 /* Actualiza el saludo y el punto rojo (se llama cada vez que se guarda) */
 App.refrescarCabecera = () => {
-  $("saludo").textContent = `Hola, ${App.estado.usuario.nombre}`;
+  $("saludo").textContent = App.esAdmin() ? "Administrador" : `Hola, ${App.estado.usuario.nombre}`;
   $("puntoNotificacion").hidden = !App.estado.notificaciones.some((n) => !n.leida);
 };
 
@@ -33,4 +33,4 @@ App.abrirNotificaciones = () => {
 };
 
 $("btnCampana").addEventListener("click", () => App.abrirNotificaciones());
-$("btnPerfil").addEventListener("click", () => App.navegar("perfil"));
+$("btnPerfil").addEventListener("click", () => App.navegar(App.esAdmin() ? "admin" : "perfil"));

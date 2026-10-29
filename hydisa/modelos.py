@@ -17,8 +17,9 @@ class Usuario:
         return self.rol == "administrador" and self.correo == CORREO_ADMIN
 
     def tiene_permiso(self, permiso):
-        """El administrador puede todo; los demás, solo lo que se les asignó."""
-        return self.es_administrador() or permiso in self.permisos
+        """Solo lo que se le asignó. El administrador NO usa los módulos de acompañamiento
+        (cargar PDF, rutas, sesiones, SOS): su cuenta es solo de gestión, así que no tiene permisos de usuario."""
+        return not self.es_administrador() and permiso in self.permisos
 
 
 @dataclass

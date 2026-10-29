@@ -20,6 +20,15 @@ App.fechaCorta = (fecha) => fecha.toLocaleDateString("es-CO", { weekday: "short"
 App.fechaDeTexto = (iso) => App.fechaCorta(new Date(iso + "T00:00:00"));
 App.fechaDiaMes = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" });   // "22 oct"
 
+/* Fecha y hora LOCAL a partir de un instante en UTC que manda el servidor ("2026-10-24T17:30:00Z") */
+App.fechaHora = (iso) => {
+  const f = new Date(iso);
+  if (isNaN(f)) return "";
+  return f.toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+};
+/* "2026-10-24" + "09:00" -> "sáb., 24 oct. · 09:00 – 09:30" */
+App.rangoBloque = (b) => `${App.fechaDeTexto(b.fecha)} · ${b.inicio} – ${b.fin}`;
+
 /* Aviso flotante de 2 segundos */
 App.aviso = (texto) => {
   const caja = $("aviso");

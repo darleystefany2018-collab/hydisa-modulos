@@ -68,6 +68,9 @@
          inicio, ruta, actividad, registro, evolución, calendario, etc. -->
     <main id="vista" class="contenido"></main>
 
+    <!-- BOTÓN SOS: ayuda inmediata. Solo lo ven los usuarios (no el administrador). Lo conecta js/sos.js -->
+    <button id="btnSOS" class="sos" aria-label="Pedir ayuda urgente (SOS)" hidden>SOS</button>
+
     <!-- MÓDULO 8: NAVEGACIÓN PRINCIPAL (barra inferior). La dibuja js/menu.js -->
     <nav id="navegacion" class="navegacion" aria-label="Navegación principal"></nav>
   </div>
@@ -115,6 +118,7 @@
   <script src="js/vistas/admin.js"></script>    <!-- Administración: usuarios y permisos (solo administrador) -->
   <script src="js/vistas/perfil.js"></script>
   <script src="js/menu.js"></script>           <!-- MÓDULOS 1 y 8 -->
+  <script src="js/sos.js"></script>            <!-- BOTÓN SOS del usuario -->
   <script src="js/acceso.js"></script>         <!-- MÓDULO 0: inicio de sesión y registro -->
   <script src="js/main.js"></script>           <!-- arranque -->
 </body>

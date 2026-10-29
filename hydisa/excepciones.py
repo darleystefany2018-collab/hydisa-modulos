@@ -15,3 +15,11 @@ class CredencialesError(HydisaError):
 
 class ArchivoInvalidoError(HydisaError):
     """El PDF no es válido (RF05, RN-02, RN-04)."""
+
+
+class PermisoDenegadoError(HydisaError):
+    """La cuenta no tiene el rol o el permiso necesario para esta acción."""
+
+
+class HorarioNoDisponibleError(HydisaError):
+    """El horario no existe, ya pasó, se solapa con otro o ya fue reservado."""

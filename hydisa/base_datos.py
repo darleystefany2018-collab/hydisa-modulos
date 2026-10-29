@@ -47,6 +47,26 @@ CREATE TABLE IF NOT EXISTS rutas (
     actividad  TEXT    NOT NULL,
     cumplida   INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS disponibilidad (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha         TEXT    NOT NULL,
+    hora_inicio   TEXT    NOT NULL,
+    hora_fin      TEXT    NOT NULL,
+    creado_por    INTEGER NOT NULL REFERENCES usuarios(id),
+    usuario_id    INTEGER REFERENCES usuarios(id),
+    tema          TEXT    NOT NULL DEFAULT '',
+    reservado_en  TEXT,
+    UNIQUE (fecha, hora_inicio)
+);
+CREATE TABLE IF NOT EXISTS alertas_sos (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id   INTEGER NOT NULL REFERENCES usuarios(id),
+    mensaje      TEXT    NOT NULL DEFAULT '',
+    creado_en    TEXT    NOT NULL,
+    atendida     INTEGER NOT NULL DEFAULT 0,
+    atendida_en  TEXT,
+    atendida_por INTEGER REFERENCES usuarios(id)
+);
 """
 
 ESQUEMA_POSTGRES = """
@@ -76,6 +96,26 @@ CREATE TABLE IF NOT EXISTS rutas (
     prioridad  INTEGER NOT NULL,
     actividad  TEXT    NOT NULL,
     cumplida   INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS disponibilidad (
+    id            SERIAL PRIMARY KEY,
+    fecha         TEXT    NOT NULL,
+    hora_inicio   TEXT    NOT NULL,
+    hora_fin      TEXT    NOT NULL,
+    creado_por    INTEGER NOT NULL REFERENCES usuarios(id),
+    usuario_id    INTEGER REFERENCES usuarios(id),
+    tema          TEXT    NOT NULL DEFAULT '',
+    reservado_en  TEXT,
+    UNIQUE (fecha, hora_inicio)
+);
+CREATE TABLE IF NOT EXISTS alertas_sos (
+    id           SERIAL PRIMARY KEY,
+    usuario_id   INTEGER NOT NULL REFERENCES usuarios(id),
+    mensaje      TEXT    NOT NULL DEFAULT '',
+    creado_en    TEXT    NOT NULL,
+    atendida     INTEGER NOT NULL DEFAULT 0,
+    atendida_en  TEXT,
+    atendida_por INTEGER REFERENCES usuarios(id)
 );
 """
 
@@ -131,6 +171,32 @@ class BaseDatos:
             cursor = self.conexion.execute(sql, parametros)
             self.conexion.commit()
             return cursor.lastrowid
+        except self._errores_integridad as error:
+            raise ErrorIntegridad(str(error)) from error
+
+    def actualizar(self, sql, parametros=()):
+        """UPDATE/DELETE que devuelve cuántas filas cambió (sirve para reservar sin que dos personas choquen)."""
+        sql = self._preparar(sql)
+        try:
+            if self.es_postgres:
+                return self.conexion.execute(sql, parametros).rowcount
+            cursor = self.conexion.execute(sql, parametros)
+            self.conexion.commit()
+            return cursor.rowcount
+        except self._errores_integridad as error:
+            raise ErrorIntegridad(str(error)) from error
+
+    def ejecutar_lote(self, operaciones):
+        """Varias instrucciones [(sql, parametros), ...] como UNA transacción: se aplican todas o ninguna."""
+        try:
+            if self.es_postgres:
+                with self.conexion.transaction():
+                    for sql, parametros in operaciones:
+                        self.conexion.execute(self._preparar(sql), parametros)
+            else:
+                with self.conexion:                       # SQLite: confirma al terminar o deshace si algo falla
+                    for sql, parametros in operaciones:
+                        self.conexion.execute(sql, parametros)
         except self._errores_integridad as error:
             raise ErrorIntegridad(str(error)) from error
 

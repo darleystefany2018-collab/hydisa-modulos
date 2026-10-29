@@ -15,7 +15,7 @@
   let raiz = null;                 // contenedor donde se dibuja todo
   let pestana = "cargar";          // "cargar" | "historial" (o "entrar" | "crear" sin sesión)
 
-  const fechaCorta = (t) => esc(String(t).slice(0, 16).replace("T", " "));
+  const fechaCorta = (t) => esc(App.fechaHora(t));
   const msg = (texto, tipo = "error") => `<p class="mensaje mensaje--${tipo}" role="alert">${esc(texto)}</p>`;
 
   /* Si el servidor no está encendido, explica cómo encenderlo */

@@ -11,6 +11,7 @@ import re
 from .config import CORREO_ADMIN, LARGO_MINIMO_CLAVE, PERMISOS
 from .excepciones import CredencialesError, DatosInvalidosError
 from .modelos import Usuario
+from .tiempo import a_iso_utc
 
 PATRON_CORREO = re.compile(r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
 
@@ -49,7 +50,10 @@ class ServicioUsuarios:
     @staticmethod
     def _a_usuario(fila):
         permisos = [p for p in (fila["permisos"] or "").split(",") if p in PERMISOS]
-        return Usuario(fila["id"], fila["nombre"], fila["correo"], fila["rol"], permisos)
+        usuario = Usuario(fila["id"], fila["nombre"], fila["correo"], fila["rol"], permisos)
+        if usuario.es_administrador():
+            usuario.permisos = []                   # cuenta de gestión: sin funciones de acompañamiento
+        return usuario
 
     # ---------- casos de uso ----------
     def registrar(self, nombre, correo, clave, rol="usuario", permisos=None):
@@ -63,7 +67,7 @@ class ServicioUsuarios:
                 f"La contraseña debe tener mínimo {LARGO_MINIMO_CLAVE} caracteres.")
         if rol == "administrador" and correo != CORREO_ADMIN:
             raise DatosInvalidosError("Solo la cuenta oficial puede ser administradora.")
-        permisos = self._validar_permisos(permisos)
+        permisos = [] if rol == "administrador" else self._validar_permisos(permisos)
         if self.bd.consultar_uno("SELECT id FROM usuarios WHERE correo = ?", (correo,)):
             raise DatosInvalidosError("Ese correo ya está registrado.")
         nuevo_id = self.bd.ejecutar(
@@ -93,7 +97,7 @@ class ServicioUsuarios:
                       (SELECT COUNT(*) FROM reportes r WHERE r.usuario_id = u.id) AS n_reportes
                FROM usuarios u ORDER BY u.id""")
         return [{**self._a_usuario(f).__dict__, "activo": bool(f["activo"]),
-                 "creado_en": str(f["creado_en"]), "n_reportes": f["n_reportes"]} for f in filas]
+                 "creado_en": a_iso_utc(f["creado_en"]), "n_reportes": f["n_reportes"]} for f in filas]
 
     def actualizar_permisos(self, usuario_id, permisos):
         destino = self.obtener(usuario_id)
@@ -122,5 +126,5 @@ class ServicioUsuarios:
             return "sin cambios"
         self.bd.ejecutar(
             "UPDATE usuarios SET rol = 'administrador', activo = 1, password_hash = ?, permisos = ? WHERE id = ?",
-            (self._cifrar(clave), ",".join(PERMISOS), fila["id"]))
+            (self._cifrar(clave), "", fila["id"]))
         return "actualizada"

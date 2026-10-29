@@ -85,13 +85,26 @@ App.api = {
     usuario: (id) => App.api.llamar("GET", `admin/usuarios/${id}`),
     crear: (datos) => App.api.llamar("POST", "admin/usuarios", { json: datos }),
     permisos: (id, lista) => App.api.llamar("POST", `admin/usuarios/${id}/permisos`, { json: { permisos: lista } }),
-    reporte: (id, reporteId) => App.api.llamar("GET", `admin/usuarios/${id}/reportes/${reporteId}`)
-  }
+    reporte: (id, reporteId) => App.api.llamar("GET", `admin/usuarios/${id}/reportes/${reporteId}`),
+    agenda: () => App.api.llamar("GET", "admin/agenda"),
+    /* datos: { fecha, inicio, fin, todo_el_dia, reemplazar } -> el servidor divide el rango en espacios reservables */
+    publicarRango: (datos) => App.api.llamar("POST", "admin/agenda", { json: datos }),
+    eliminarBloque: (id) => App.api.llamar("POST", `admin/agenda/${id}/eliminar`),
+    alertas: () => App.api.llamar("GET", "admin/alertas"),
+    atenderAlerta: (id) => App.api.llamar("POST", `admin/alertas/${id}/atender`)
+  },
+
+  /* ----- Acompañamiento y SOS (solo usuarios; al administrador el servidor le responde 403) ----- */
+  sesiones: () => App.api.llamar("GET", "sesiones"),
+  reservar: (id, tema) => App.api.llamar("POST", `sesiones/${id}/reservar`, { json: { tema } }),
+  cancelarReserva: (id) => App.api.llamar("POST", `sesiones/${id}/cancelar`),
+  sosEstado: () => App.api.llamar("GET", "sos"),
+  sos: (mensaje) => App.api.llamar("POST", "sos", { json: { mensaje } })
 };
 
 /* OJO: estas dos preguntas solo sirven para mostrar u ocultar botones.
    La seguridad real está en el servidor, que revisa el rol y los permisos en cada solicitud. */
 App.esAdmin = () => !!(App.api.usuario && App.api.usuario.es_admin);
-App.puede = (permiso) => !!(App.api.usuario && (App.api.usuario.es_admin || (App.api.usuario.permisos || []).includes(permiso)));
+App.puede = (permiso) => !!(App.api.usuario && !App.api.usuario.es_admin && (App.api.usuario.permisos || []).includes(permiso));
 
 App.api.cargarSesion();

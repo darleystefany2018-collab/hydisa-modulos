@@ -13,6 +13,9 @@ App.navegar = (id) => { location.hash = "#/" + id; };
 
 /* Nombre de la pantalla actual */
 App.vistaActual = () => {
+  /* El administrador solo tiene el módulo de gestión: cualquier otra dirección lo lleva ahí.
+     (El servidor además le niega las rutas de acompañamiento: esto solo evita pantallas vacías.) */
+  if (App.esAdmin()) return "admin";
   const id = location.hash.replace("#/", "");
   return App.vistas[id] ? id : "inicio";
 };
@@ -23,9 +26,10 @@ App.mostrar = () => {
   App.cerrarHoja();
   const id = App.vistaActual();
   const vista = App.vistas[id];
+  /* Barra con título y botón "volver" (el administrador no tiene inicio al que volver) */
   const barra = id === "inicio" ? "" : `
     <div class="barra-vista">
-      <button class="icono-btn" data-ir="inicio" aria-label="Volver al inicio">${icono("i-back")}</button>
+      ${App.esAdmin() ? "" : `<button class="icono-btn" data-ir="inicio" aria-label="Volver al inicio">${icono("i-back")}</button>`}
       <h2>${vista.titulo}</h2>
     </div>`;
   const contenedor = $("vista");
