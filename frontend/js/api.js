@@ -90,6 +90,9 @@ App.api = {
     /* datos: { fecha, inicio, fin, todo_el_dia, reemplazar } -> el servidor divide el rango en espacios reservables */
     publicarRango: (datos) => App.api.llamar("POST", "admin/agenda", { json: datos }),
     eliminarBloque: (id) => App.api.llamar("POST", `admin/agenda/${id}/eliminar`),
+    cancelarCita: (id) => App.api.llamar("POST", `admin/agenda/${id}/cancelar`),
+    /* mueve la cita al horario publicado y libre `nuevoId` */
+    reprogramar: (id, nuevoId) => App.api.llamar("POST", `admin/agenda/${id}/reprogramar`, { json: { nuevo_id: nuevoId } }),
     alertas: () => App.api.llamar("GET", "admin/alertas"),
     atenderAlerta: (id) => App.api.llamar("POST", `admin/alertas/${id}/atender`)
   },

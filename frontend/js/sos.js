@@ -56,5 +56,79 @@
     }
   }
 
+  /* ---------- Botón flotante movible ----------
+     Siempre visible (position: fixed), pero la persona puede arrastrarlo (mouse o dedo) o moverlo con
+     las flechas del teclado para que no tape nada. Se queda dentro de la app, debajo de la cabecera y
+     encima de la barra inferior, y recuerda su lugar. Un toque o clic simple sigue abriendo la ayuda. */
+  function hacerFlotante(boton) {
+    const CLAVE = "hydisa_sos_pos_v1", MARGEN = 8, UMBRAL = 6, PASO = 16;
+    const app = document.querySelector(".app");
+    /* pos = distancia al borde derecho de la app (dx) y al borde inferior de la pantalla (dy):
+       los mismos valores que tenía el CSS original (16 y 92), por eso sin mover se ve igual que antes. */
+    let pos = null, inicio = null, movio = false;
+    try {
+      const g = JSON.parse(localStorage.getItem(CLAVE) || "null");
+      if (g && isFinite(g.dx) && isFinite(g.dy)) pos = { dx: g.dx, dy: g.dy };
+    } catch (e) { /* sin almacenamiento: no recuerda el lugar */ }
+
+    const limites = () => {
+      const r = app.getBoundingClientRect(), tam = boton.offsetWidth || 58;
+      const cab = document.querySelector(".cabecera"), nav = $("navegacion");
+      const minX = r.left + MARGEN, minY = (cab ? cab.offsetHeight : 0) + MARGEN;
+      return { r, tam, minX, minY,
+        maxX: Math.max(minX, r.right - tam - MARGEN),
+        maxY: Math.max(minY, innerHeight - (nav ? nav.offsetHeight : 70) - tam - MARGEN) };
+    };
+    const colocar = () => {                     // dibuja el botón en pos (ajustado a los límites actuales)
+      if (!pos) return;                         // nunca movido: manda el CSS
+      const l = limites();
+      if (!l.r.width) return;                   // la app está oculta (pantalla de acceso): se recoloca al mostrarse
+      const x = Math.min(Math.max(l.r.right - pos.dx - l.tam, l.minX), l.maxX);
+      const y = Math.min(Math.max(innerHeight - pos.dy - l.tam, l.minY), l.maxY);
+      Object.assign(boton.style, { left: x + "px", top: y + "px", right: "auto", bottom: "auto" });
+    };
+    const mover = (x, y) => {                   // x, y = esquina superior izquierda deseada
+      const l = limites();
+      x = Math.min(Math.max(x, l.minX), l.maxX); y = Math.min(Math.max(y, l.minY), l.maxY);
+      pos = { dx: l.r.right - x - l.tam, dy: innerHeight - y - l.tam };
+      colocar();
+    };
+    const guardar = () => { try { localStorage.setItem(CLAVE, JSON.stringify(pos)); } catch (e) { /* nada */ } };
+
+    boton.addEventListener("pointerdown", (e) => {
+      if (e.button > 0) return;                 // solo botón principal / dedo
+      const r = boton.getBoundingClientRect();
+      inicio = { px: e.clientX, py: e.clientY, x: r.left, y: r.top };
+      movio = false;
+      boton.setPointerCapture(e.pointerId);
+    });
+    boton.addEventListener("pointermove", (e) => {
+      if (!inicio) return;
+      const mx = e.clientX - inicio.px, my = e.clientY - inicio.py;
+      if (!movio && Math.hypot(mx, my) < UMBRAL) return;   // un toque corto no es arrastre
+      movio = true; boton.classList.add("sos--arrastrando");
+      mover(inicio.x + mx, inicio.y + my);
+    });
+    const soltar = () => { inicio = null; boton.classList.remove("sos--arrastrando"); if (movio) guardar(); };
+    boton.addEventListener("pointerup", soltar);
+    boton.addEventListener("pointercancel", () => { soltar(); movio = false; });
+    /* Si fue un arrastre, el "clic" que sigue al soltar no debe abrir la ayuda.
+       Se registra ANTES que el de abrir() para poder detenerlo. */
+    boton.addEventListener("click", (e) => { if (movio) { e.stopImmediatePropagation(); movio = false; } });
+
+    boton.addEventListener("keydown", (e) => {   // accesibilidad: flechas mueven el botón
+      const d = { ArrowLeft: [-PASO, 0], ArrowRight: [PASO, 0], ArrowUp: [0, -PASO], ArrowDown: [0, PASO] }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      const r = boton.getBoundingClientRect();
+      mover(r.left + d[0], r.top + d[1]); guardar();
+    });
+
+    window.addEventListener("resize", colocar);                       // girar el celular o cambiar el tamaño de la ventana
+    if (window.ResizeObserver) new ResizeObserver(colocar).observe(app); // la app aparece al iniciar sesión
+    colocar();
+  }
+
+  hacerFlotante($("btnSOS"));
   $("btnSOS").addEventListener("click", abrir);
 })();

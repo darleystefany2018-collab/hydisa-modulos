@@ -325,6 +325,13 @@ class Manejador(BaseHTTPRequestHandler):
             if metodo == "POST" and len(partes) == 3 and partes[1].isdigit() and partes[2] == "eliminar":
                 app.agenda.eliminar_bloque(admin, int(partes[1]))
                 return self._enviar_json({"ok": True})
+            if metodo == "POST" and len(partes) == 3 and partes[1].isdigit() and partes[2] == "cancelar":
+                return self._enviar_json({"bloque": app.agenda.cancelar_cita(admin, int(partes[1]))})
+            if metodo == "POST" and len(partes) == 3 and partes[1].isdigit() and partes[2] == "reprogramar":
+                nuevo = self._leer_json().get("nuevo_id")
+                if not isinstance(nuevo, int) or isinstance(nuevo, bool):
+                    raise RespuestaError(400, "Indica el horario nuevo (nuevo_id).")
+                return self._enviar_json(app.agenda.reprogramar(admin, int(partes[1]), nuevo))
             raise RespuestaError(404, "Ruta de la API no encontrada.")
 
         if partes[:1] != ["usuarios"]:

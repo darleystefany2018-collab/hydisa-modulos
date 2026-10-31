@@ -60,7 +60,9 @@ ol, ul { list-style: none; }
   padding: 22px 18px 0;
   position: relative; z-index: 2;   /* queda por encima de la bienvenida para recibir los clics */
 }
+.cabecera__izq { display: flex; align-items: center; gap: 2px; }   /* menú + volver, uno junto al otro */
 .icono-btn { padding: 6px; border-radius: 12px; color: var(--texto); }
+.icono-btn[hidden] { display: none; }
 .perfil { display: flex; align-items: center; gap: 10px; }
 .perfil__avatar {
   width: 54px; height: 54px; border-radius: 50%;
@@ -356,6 +358,8 @@ ol, ul { list-style: none; }
   font-weight: 600; font-size: 1rem; letter-spacing: .04em; border: 3px solid #fff;
   box-shadow: 0 6px 16px rgba(120, 30, 20, .35);
 }
+.sos { touch-action: none; user-select: none; -webkit-user-select: none; }   /* permite arrastrarlo con el dedo sin que la página se desplace */
+.sos--arrastrando { box-shadow: 0 10px 24px rgba(120, 30, 20, .45); }
 .sos:hover { background: #983526; }
 .sos[hidden] { display: none; }
 .sos__aviso { margin-top: 14px; font-size: .85rem; color: var(--texto-suave); line-height: 1.4; }
@@ -365,6 +369,18 @@ ol, ul { list-style: none; }
 .horarios { display: flex; flex-wrap: wrap; gap: 8px; }
 .horario { padding: 9px 14px; border-radius: 20px; background: var(--verde-claro); color: var(--verde-oscuro); font-weight: 500; }
 .horario:hover { background: #cfdfca; }
+
+/* Agenda por días (clases agenda-dia*: .dia/.dias ya los usa el inicio para los círculos de la ruta); lista de días; las horas se muestran solo del día elegido */
+.horario--reservado { background: #f6e7d4; color: #7a4b12; }   /* cita reservada (vista del administrador) */
+.horario--reservado:hover { background: #efdabf; }
+.agenda-dias { display: grid; gap: 8px; margin-top: 12px; }
+.agenda-dia { border: 1px solid var(--borde); border-radius: 14px; background: #fff; overflow: hidden; }
+.agenda-dia--abierto { border-color: var(--verde-medio); }
+.agenda-dia__boton { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 14px; text-align: left; }
+.agenda-dia__flecha { transition: transform .2s ease; color: var(--texto-suave); }
+.agenda-dia--abierto .agenda-dia__flecha { transform: rotate(90deg); }
+.agenda-dia__horas { padding: 4px 14px 14px; }
+.agenda-dia__horas[hidden] { display: none; }
 
 /* ---------- ADMINISTRACIÓN: alertas SOS ---------- */
 .tarjeta--alerta { border-color: #e3b9b2; background: #fff7f5; margin-bottom: 12px; }

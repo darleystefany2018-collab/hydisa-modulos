@@ -257,6 +257,27 @@ class PruebasAPI(unittest.TestCase):
         self.assertEqual(self.bloque(ta, "09:00", "09:30", dia=-1)[0], 400)     # ayer
         self.assertEqual(self.llamar("POST", "/api/admin/agenda", {"fecha": "x"}, token=ta)[0], 400)
 
+    def test_admin_cancela_y_reprograma_citas_por_la_api(self):
+        ta, t1, t2 = self.token_admin(), self.entrar("ag4@correo.com"), self.entrar("ag5@correo.com")
+        a = self.bloque(ta, "08:00", "08:30", dia=6)[1]["bloque"]["id"]
+        b = self.bloque(ta, "08:30", "09:00", dia=6)[1]["bloque"]["id"]
+        self.llamar("POST", f"/api/sesiones/{a}/reservar", {"tema": "Estrés"}, token=t1)
+        # un usuario normal no puede (403) y falta el horario nuevo (400)
+        self.assertEqual(self.llamar("POST", f"/api/admin/agenda/{a}/cancelar", token=t1)[0], 403)
+        self.assertEqual(self.llamar("POST", f"/api/admin/agenda/{a}/reprogramar", {"nuevo_id": b}, token=t1)[0], 403)
+        self.assertEqual(self.llamar("POST", f"/api/admin/agenda/{a}/reprogramar", {}, token=ta)[0], 400)
+        # reprogramar: el nuevo queda ocupado y el anterior libre
+        codigo, r = self.llamar("POST", f"/api/admin/agenda/{a}/reprogramar", {"nuevo_id": b}, token=ta)
+        self.assertEqual((codigo, r["anterior"]["reservado"], r["nueva"]["reservado"]), (200, False, True))
+        libres = [x["id"] for x in self.llamar("GET", "/api/sesiones", token=t2)[1]["disponibles"]]
+        self.assertIn(a, libres)
+        self.assertNotIn(b, libres)
+        self.assertEqual(self.llamar("POST", f"/api/admin/agenda/{a}/reprogramar", {"nuevo_id": b}, token=ta)[0], 409)  # a ya no tiene cita
+        # cancelar: vuelve a estar libre
+        self.assertEqual(self.llamar("POST", f"/api/admin/agenda/{b}/cancelar", token=ta)[0], 200)
+        self.assertEqual(self.llamar("GET", "/api/sesiones", token=t1)[1]["mias"], [])
+        self.assertEqual(self.llamar("POST", f"/api/admin/agenda/{b}/cancelar", token=ta)[0], 409)   # ya estaba libre
+
     def test_reservar_solo_lo_publicado(self):
         t = self.entrar("ag3@correo.com")
         self.assertEqual(self.llamar("POST", "/api/sesiones/987654/reservar", {}, token=t)[0], 404)

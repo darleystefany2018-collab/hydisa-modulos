@@ -20,16 +20,27 @@ App.vistaActual = () => {
   return App.vistas[id] ? id : "inicio";
 };
 
+/* Pantallas visitadas en orden (la última es la actual). Inicio es la raíz: al llegar a ella se reinicia.
+   Sirve para que "Volver" sepa si hay una pantalla anterior dentro de la app. */
+const pila = [];
+
 /* Dibuja la pantalla que corresponde a la dirección actual */
 App.mostrar = () => {
   if (App.limpiar) { App.limpiar(); App.limpiar = null; }     // detiene temporizadores de la pantalla anterior
   App.cerrarHoja();
   const id = App.vistaActual();
   const vista = App.vistas[id];
-  /* Barra con título y botón "volver" (el administrador no tiene inicio al que volver) */
+
+  if (id === "inicio") pila.length = 0;
+  if (pila[pila.length - 2] === id) pila.pop();               // se volvió atrás (botón o navegador)
+  else if (pila[pila.length - 1] !== id) pila.push(id);
+  /* El botón "Volver" vive en la cabecera, junto al menú. El administrador solo tiene su módulo: no lo necesita. */
+  const atras = $("btnAtras");                                // (si index.html no está actualizado no existe: no debe romper la pantalla)
+  if (atras) atras.hidden = id === "inicio" || App.esAdmin();
+
+  /* Barra solo con el título (el botón de volver ya está en la cabecera) */
   const barra = id === "inicio" ? "" : `
     <div class="barra-vista">
-      ${App.esAdmin() ? "" : `<button class="icono-btn" data-ir="inicio" aria-label="Volver al inicio">${icono("i-back")}</button>`}
       <h2>${vista.titulo}</h2>
     </div>`;
   const contenedor = $("vista");
@@ -40,6 +51,12 @@ App.mostrar = () => {
 };
 
 window.addEventListener("hashchange", App.mostrar);
+
+/* Botón "Volver" de la cabecera: si hay pantalla anterior usa el historial del navegador
+   (así queda igual que el botón "atrás" del celular); si no la hay (p. ej. se recargó la página), va a inicio. */
+if ($("btnAtras")) $("btnAtras").addEventListener("click", () => {
+  if (pila.length > 1) history.back(); else App.navegar("inicio");
+});
 
 /* Cualquier elemento con data-ir="nombre" lleva a esa pantalla */
 document.addEventListener("click", (e) => {

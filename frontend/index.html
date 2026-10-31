@@ -47,9 +47,15 @@
          1. Botón de menú principal (abre el panel lateral).
          2. Perfil del usuario y campana de notificaciones. -->
     <header class="cabecera">
-      <button id="btnMenu" class="icono-btn" aria-label="Abrir menú">
-        <svg class="icono"><use href="#i-menu"/></svg>
-      </button>
+      <div class="cabecera__izq">
+        <button id="btnMenu" class="icono-btn" aria-label="Abrir menú">
+          <svg class="icono"><use href="#i-menu"/></svg>
+        </button>
+        <!-- Volver a la pantalla anterior. Lo muestra u oculta router.js (no aparece en inicio). -->
+        <button id="btnAtras" class="icono-btn" aria-label="Volver a la pantalla anterior" hidden>
+          <svg class="icono"><use href="#i-back"/></svg>
+        </button>
+      </div>
       <div class="perfil">
         <button class="perfil__avatar" id="btnPerfil" aria-label="Ver mi perfil">
           <svg class="icono"><use href="#i-user"/></svg>
@@ -69,7 +75,7 @@
     <main id="vista" class="contenido"></main>
 
     <!-- BOTÓN SOS: ayuda inmediata. Solo lo ven los usuarios (no el administrador). Lo conecta js/sos.js -->
-    <button id="btnSOS" class="sos" aria-label="Pedir ayuda urgente (SOS)" hidden>SOS</button>
+    <button id="btnSOS" class="sos" aria-label="Pedir ayuda urgente (SOS). Se puede mover con las flechas del teclado." title="Arrástralo para moverlo" hidden>SOS</button>
 
     <!-- MÓDULO 8: NAVEGACIÓN PRINCIPAL (barra inferior). La dibuja js/menu.js -->
     <nav id="navegacion" class="navegacion" aria-label="Navegación principal"></nav>
@@ -104,6 +110,7 @@
   <script src="js/ui.js"></script>             <!-- ayudas: avisos, hojas, iconos -->
   <script src="js/api.js"></script>            <!-- conexión con el servidor de Python (servidor.py) -->
   <script src="js/router.js"></script>         <!-- cambia de pantalla según la dirección (#/ruta) -->
+  <script src="js/agenda_dias.js"></script>    <!-- componente compartido: días con horas desplegables (usuario y administrador) -->
   <script src="js/notificaciones.js"></script> <!-- MÓDULO 2 -->
   <script src="js/intencion.js"></script>      <!-- MÓDULO 4 -->
   <script src="js/vistas/inicio.js"></script>  <!-- MÓDULOS 3, 4, 5, 6 y 7 (pantalla de inicio) -->

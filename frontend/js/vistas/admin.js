@@ -220,22 +220,79 @@
     return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
   };
 
+  const estadoAgenda = { dia: null };      // día abierto en la lista de agenda (se conserva al refrescar)
+  const textoBloque = (b) => `${App.fechaDeTexto(b.fecha)} · ${b.inicio} – ${b.fin}`;
+  const esFuturo = (b) => new Date(`${b.fecha}T${b.inicio}:00`) > new Date();   // solo para no ofrecer horas pasadas; el servidor lo vuelve a validar
+
+  /* Hoja de un horario libre: se puede eliminar (como antes con el icono de la papelera) */
+  function abrirLibre(b) {
+    App.abrirHoja("Horario libre", `
+      <p><strong>${esc(textoBloque(b))}</strong></p>
+      <p class="texto-suave">Nadie lo ha reservado.</p>
+      <div id="mensajesHoja"></div>
+      <button id="btnEliminarBloque" class="boton boton--sec">Eliminar este horario</button>`, (cuerpo) => {
+      cuerpo.querySelector("#btnEliminarBloque").addEventListener("click", async () => {
+        if (!confirm("¿Eliminar este horario libre?")) return;
+        try { await App.api.admin.eliminarBloque(b.id); App.cerrarHoja(); App.aviso("Horario eliminado"); agenda(); }
+        catch (error) { alFallar(error, cuerpo.querySelector("#mensajesHoja")); }
+      });
+    });
+  }
+
+  /* Hoja de una cita reservada: cancelar (el horario queda libre) o reprogramar (mover a otro horario libre) */
+  function abrirCita(b, bloques) {
+    App.abrirHoja("Cita reservada", `
+      <p><strong>${esc(textoBloque(b))}</strong></p>
+      <p class="texto-suave">${esc(b.usuario.nombre)} (${esc(b.usuario.correo)})${b.tema ? " · " + esc(b.tema) : ""}</p>
+      <div id="mensajesHoja"></div>
+      <button id="btnReprogramar" class="boton">Reprogramar</button>
+      <button id="btnCancelarCita" class="boton boton--sec">Cancelar cita</button>`, (cuerpo) => {
+      cuerpo.querySelector("#btnCancelarCita").addEventListener("click", async () => {
+        if (!confirm(`¿Cancelar la cita de ${b.usuario.nombre}? El horario quedará libre.`)) return;
+        try { await App.api.admin.cancelarCita(b.id); App.cerrarHoja(); App.aviso("Cita cancelada"); agenda(); }
+        catch (error) { alFallar(error, cuerpo.querySelector("#mensajesHoja")); if (error.codigo === 409) agenda(); }
+      });
+      cuerpo.querySelector("#btnReprogramar").addEventListener("click", () => elegirNuevoHorario(b, bloques));
+    });
+  }
+
+  /* Segundo paso de reprogramar: los horarios libres, con la misma lista de días que ve el usuario */
+  function elegirNuevoHorario(cita, bloques) {
+    const libres = bloques.filter((x) => !x.reservado && x.id !== cita.id && esFuturo(x));
+    const estado = { dia: null };
+    App.abrirHoja("Reprogramar cita", `
+      <p class="texto-suave">Elige el nuevo día y hora para ${esc(cita.usuario.nombre)}. Ahora: ${esc(textoBloque(cita))}.</p>
+      <div id="mensajesHoja"></div>
+      ${libres.length ? App.agendaDias.html(libres, estado, {
+        resumen: (delDia) => `${delDia.length} ${delDia.length === 1 ? "horario libre" : "horarios libres"}`,
+        hora: (x) => `<button class="horario" data-nuevo="${Number(x.id)}" data-texto="${esc(textoBloque(x))}">${esc(x.inicio)} – ${esc(x.fin)}</button>`
+      }) : `<p class="vacio">No hay otros horarios libres publicados. Publica más disponibilidad primero.</p>`}`, (cuerpo) => {
+      App.agendaDias.activar(cuerpo, estado);
+      cuerpo.querySelectorAll("[data-nuevo]").forEach((boton) => boton.addEventListener("click", async () => {
+        if (!confirm(`¿Mover la cita de ${cita.usuario.nombre} a ${boton.dataset.texto}?`)) return;
+        try { await App.api.admin.reprogramar(cita.id, Number(boton.dataset.nuevo)); App.cerrarHoja(); App.aviso("Cita reprogramada"); agenda(); }
+        catch (error) { alFallar(error, cuerpo.querySelector("#mensajesHoja")); if (error.codigo === 409 || error.codigo === 404) agenda(); }
+      }));
+    });
+  }
+
   async function agenda(aviso = "") {
     const zona = cont.querySelector("#zonaAdmin");
     zona.innerHTML = `<p class="vacio">Cargando…</p>`;
     try {
       const { bloques, duracion_sesion: duracion, apertura, cierre } = await App.api.admin.agenda();
-      const porDia = {};
-      bloques.forEach((b) => (porDia[b.fecha] = porDia[b.fecha] || []).push(b));
-      const lista = Object.keys(porDia).length ? Object.entries(porDia).map(([f, bs]) => `
-        <p class="texto-chico" style="margin:12px 0 6px">${esc(App.fechaDeTexto(f))}</p>
-        <ul class="lista">${bs.map((b) => `
-          <li class="item item--registro">
-            <span class="item__texto"><strong>${esc(b.inicio)} – ${esc(b.fin)}</strong>
-              <small>${b.reservado ? `Reservado por ${esc(b.usuario.nombre)} (${esc(b.usuario.correo)})${b.tema ? " · " + esc(b.tema) : ""}` : "Libre"}</small></span>
-            ${b.reservado ? `<span class="etiqueta etiqueta--hoy">Reservado</span>`
-              : `<button class="icono-btn" data-eliminar="${Number(b.id)}" aria-label="Eliminar bloque">${icono("i-trash")}</button>`}
-          </li>`).join("")}</ul>`).join("") : `<p class="vacio">Aún no has publicado horarios.</p>`;
+      const porId = Object.fromEntries(bloques.map((b) => [b.id, b]));
+      /* Misma presentación que ve la persona al agendar (componente compartido js/agenda_dias.js):
+         primero los días y, al elegir uno, sus horas. Aquí además se distinguen libres y reservadas. */
+      const lista = bloques.length ? App.agendaDias.html(bloques, estadoAgenda, {
+        resumen: (delDia) => {
+          const r = delDia.filter((b) => b.reservado).length, l = delDia.length - r;
+          return `${l} ${l === 1 ? "libre" : "libres"} · ${r} ${r === 1 ? "reservado" : "reservados"}`;
+        },
+        hora: (b) => b.reservado
+          ? `<button class="horario horario--reservado" data-cita="${Number(b.id)}">${esc(b.inicio)} – ${esc(b.fin)} · ${esc(b.usuario.nombre)}</button>`
+          : `<button class="horario" data-libre="${Number(b.id)}">${esc(b.inicio)} – ${esc(b.fin)}</button>`
+      }) : `<p class="vacio">Aún no has publicado horarios.</p>`;
 
       zona.innerHTML = `
         ${aviso ? msg(aviso, "ok") : ""}
@@ -252,7 +309,8 @@
           <div id="mensajes"></div>
           <button class="boton" type="submit">Publicar disponibilidad</button>
         </form>
-        <p class="subtitulo" style="margin:16px 0 0">Bloques publicados</p>${lista}`;
+        <p class="subtitulo" style="margin:16px 0 0">Horarios publicados y citas</p>
+        <p class="texto-chico">Elige un día para ver sus horas. Toca una hora libre para eliminarla o una reservada para cancelar o reprogramar la cita.</p>${lista}`;
 
       const f = zona.querySelector("#formBloque");
       f.elements.inicio.addEventListener("change", () => {          // comodidad: sugiere un fin a una duración de cita
@@ -280,11 +338,9 @@
           agenda(texto);
         } catch (error) { boton.disabled = false; alFallar(error, f.querySelector("#mensajes")); }
       });
-      zona.querySelectorAll("[data-eliminar]").forEach((b) => b.addEventListener("click", async () => {
-        if (!confirm("¿Eliminar este bloque libre?")) return;
-        try { await App.api.admin.eliminarBloque(Number(b.dataset.eliminar)); App.aviso("Bloque eliminado"); agenda(); }
-        catch (error) { alFallar(error, zona); }
-      }));
+      App.agendaDias.activar(zona, estadoAgenda);
+      zona.querySelectorAll("[data-libre]").forEach((b) => b.addEventListener("click", () => abrirLibre(porId[b.dataset.libre])));
+      zona.querySelectorAll("[data-cita]").forEach((b) => b.addEventListener("click", () => abrirCita(porId[b.dataset.cita], bloques)));
     } catch (error) { alFallar(error, zona); }
   }
 

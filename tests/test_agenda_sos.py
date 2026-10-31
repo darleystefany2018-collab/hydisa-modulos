@@ -180,5 +180,83 @@ class PruebasAgenda(unittest.TestCase):
         self.assertTrue(nueva)
 
 
+
+class PruebasCancelarYReprogramar(unittest.TestCase):
+    """El administrador cancela o reprograma citas de los usuarios (reloj fijo: hoy 23-oct-2026 10:00)."""
+
+    def setUp(self):
+        self.bd = BaseDatos()
+        usuarios = ServicioUsuarios(self.bd)
+        usuarios.asegurar_administrador("ClaveAdmin123")
+        self.admin = usuarios.iniciar_sesion("hydisa123@gmail.com", "ClaveAdmin123")
+        self.ana = usuarios.registrar("Ana", "ana@mail.com", "clave12345")
+        self.luis = usuarios.registrar("Luis", "luis@mail.com", "clave12345")
+        self.agenda = ServicioSesiones(self.bd, ahora=lambda: AHORA)
+        self.a = self.agenda.crear_bloque(self.admin, MANANA, "09:00", "09:30")["id"]
+        self.b = self.agenda.crear_bloque(self.admin, MANANA, "09:30", "10:00")["id"]
+        self.c = self.agenda.crear_bloque(self.admin, "2026-10-26", "14:00", "14:30")["id"]
+        self.agenda.reservar(self.ana, self.a, "Hábitos de descanso")
+
+    def libres(self):
+        return [x["id"] for x in self.agenda.disponibles(self.luis)]
+
+    def test_solo_el_administrador_cancela_o_reprograma(self):
+        for accion in (lambda: self.agenda.cancelar_cita(self.ana, self.a),
+                       lambda: self.agenda.reprogramar(self.ana, self.a, self.c)):
+            with self.assertRaises(PermisoDenegadoError):
+                accion()
+
+    def test_cancelar_libera_el_horario_y_borra_la_cita_del_usuario(self):
+        self.assertNotIn(self.a, self.libres())
+        r = self.agenda.cancelar_cita(self.admin, self.a)
+        self.assertEqual((r["reservado"], r["tema"]), (False, ""))
+        self.assertIn(self.a, self.libres())                 # vuelve a ser reservable
+        self.assertEqual(self.agenda.mias(self.ana), [])      # y desaparece de las citas de Ana
+        self.assertTrue(self.agenda.reservar(self.luis, self.a)["reservado"])
+
+    def test_cancelar_exige_una_cita_existente_y_futura(self):
+        with self.assertRaises(HorarioNoDisponibleError):     # libre: no hay nada que cancelar
+            self.agenda.cancelar_cita(self.admin, self.b)
+        with self.assertRaises(IndexError):
+            self.agenda.cancelar_cita(self.admin, 99999)
+        self.agenda.reservar(self.ana, self.c, "x")
+        self.agenda = ServicioSesiones(self.bd, ahora=lambda: datetime(2026, 10, 26, 14, 10))   # la cita ya empezó
+        with self.assertRaises(HorarioNoDisponibleError):
+            self.agenda.cancelar_cita(self.admin, self.c)
+
+    def test_reprogramar_mueve_la_cita_y_actualiza_ambos_horarios(self):
+        r = self.agenda.reprogramar(self.admin, self.a, self.c)
+        self.assertFalse(r["anterior"]["reservado"])
+        self.assertTrue(r["nueva"]["reservado"])
+        self.assertIn(self.a, self.libres())                  # el anterior se libera
+        self.assertNotIn(self.c, self.libres())               # el nuevo queda bloqueado
+        mias = self.agenda.mias(self.ana)
+        self.assertEqual([(m["id"], m["tema"]) for m in mias], [(self.c, "Hábitos de descanso")])   # conserva el tema
+
+    def test_reprogramar_no_acepta_horarios_ocupados_pasados_ni_inexistentes(self):
+        self.agenda.reservar(self.luis, self.b, "otro")
+        with self.assertRaises(HorarioNoDisponibleError):     # ocupado
+            self.agenda.reprogramar(self.admin, self.a, self.b)
+        pasado = self.bd.ejecutar(
+            "INSERT INTO disponibilidad (fecha, hora_inicio, hora_fin, creado_por) VALUES (?,?,?,?)",
+            ("2026-10-23", "08:00", "08:30", self.admin.id))
+        with self.assertRaises(HorarioNoDisponibleError):     # ya pasó
+            self.agenda.reprogramar(self.admin, self.a, pasado)
+        with self.assertRaises(IndexError):
+            self.agenda.reprogramar(self.admin, self.a, 99999)
+        with self.assertRaises(DatosInvalidosError):          # mismo horario
+            self.agenda.reprogramar(self.admin, self.a, self.a)
+        with self.assertRaises(HorarioNoDisponibleError):     # origen sin cita
+            self.agenda.reprogramar(self.admin, self.c, self.b)
+        self.assertEqual([m["id"] for m in self.agenda.mias(self.ana)], [self.a])     # nada cambió
+
+    def test_reprogramar_no_cruza_otra_sesion_de_la_misma_persona(self):
+        self.agenda.reservar(self.ana, self.c, "otra")        # Ana tiene a (09:00) y c (lunes 14:00)
+        otro = self.bd.ejecutar(      # dato "crudo" (el servicio no deja publicar bloques cruzados): segunda barrera
+            "INSERT INTO disponibilidad (fecha, hora_inicio, hora_fin, creado_por) VALUES (?,?,?,?)",
+            ("2026-10-26", "14:15", "14:45", self.admin.id))
+        with self.assertRaises(HorarioNoDisponibleError):
+            self.agenda.reprogramar(self.admin, self.a, otro)
+
 if __name__ == "__main__":
     unittest.main()

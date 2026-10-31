@@ -15,6 +15,8 @@ Decisiones de diseño:
   - Reservar es una sola instrucción UPDATE ... WHERE usuario_id IS NULL: si dos personas
     intentan a la vez, solo una gana.
   - Las horas se interpretan en la hora local del servidor (el computador donde corre HYDISA).
+  - El administrador puede cancelar una cita (el bloque vuelve a quedar libre) o reprogramarla a otro bloque
+    publicado y libre; ambas operaciones nunca tocan citas ya empezadas.
   - Los roles se vuelven a comprobar aquí aunque el servidor web ya lo haga (doble barrera).
 """
 from datetime import datetime
@@ -212,6 +214,63 @@ class ServicioSesiones:
             raise HorarioNoDisponibleError("No puedes eliminar un bloque que ya fue reservado.")
         self.bd.ejecutar("DELETE FROM disponibilidad WHERE id = ? AND usuario_id IS NULL", (bloque_id,))
 
+    # ---------- administrador: cancelar y reprogramar citas ----------
+    def _liberar(self, bloque_id, usuario_id):
+        """Deja libre un bloque reservado por `usuario_id` (lo usan el usuario y el administrador)."""
+        return self.bd.actualizar(
+            "UPDATE disponibilidad SET usuario_id = NULL, tema = '', reservado_en = NULL WHERE id = ? AND usuario_id = ?",
+            (bloque_id, usuario_id))
+
+    def _cita(self, bloque_id):
+        """Fila de un bloque que SÍ tiene una cita reservada y que todavía no empezó."""
+        fila = self._obtener(bloque_id)
+        if fila is None:
+            raise IndexError("Esa cita no existe.")
+        if fila["usuario_id"] is None:
+            raise HorarioNoDisponibleError("Ese horario no tiene una cita reservada.")
+        if self._empieza_en(fila["fecha"], fila["hora_inicio"]) <= self._ahora():
+            raise HorarioNoDisponibleError("No se puede cambiar una cita que ya empezó.")
+        return fila
+
+    def cancelar_cita(self, admin, bloque_id):
+        """El administrador cancela la cita de cualquier usuario: el horario vuelve a quedar libre y
+        reservable (sigue publicado). La cita pasada o en curso no se puede cancelar."""
+        self._exigir_admin(admin)
+        fila = self._cita(bloque_id)
+        self._liberar(bloque_id, fila["usuario_id"])
+        return self._a_dict(self._obtener(bloque_id))
+
+    def reprogramar(self, admin, bloque_id, nuevo_id):
+        """Mueve la cita de `bloque_id` a otro horario YA PUBLICADO y libre (`nuevo_id`).
+        Mismas reglas que al reservar: el destino debe existir, estar libre, ser futuro y no cruzarse con
+        otra sesión de la misma persona. Se reserva primero el destino con un UPDATE ... WHERE usuario_id IS NULL
+        (si alguien lo ocupa a la vez, falla sin tocar nada) y después se libera el origen: si algo se
+        interrumpe entre los dos pasos, la persona nunca se queda sin cita."""
+        self._exigir_admin(admin)
+        origen = self._cita(bloque_id)
+        if nuevo_id == bloque_id:
+            raise DatosInvalidosError("Elige un horario distinto al actual.")
+        destino = self._obtener(nuevo_id)
+        if destino is None:
+            raise IndexError("Ese horario no existe.")
+        self._validar_duracion(destino["hora_inicio"], destino["hora_fin"])
+        if self._empieza_en(destino["fecha"], destino["hora_inicio"]) <= self._ahora():
+            raise HorarioNoDisponibleError("Ese horario ya pasó.")
+        if destino["usuario_id"] is not None:
+            raise HorarioNoDisponibleError("Ese horario ya está ocupado.")
+        if self.bd.consultar_uno(
+                """SELECT id FROM disponibilidad WHERE usuario_id = ? AND fecha = ? AND hora_inicio < ?
+                   AND hora_fin > ? AND id NOT IN (?, ?)""",
+                (origen["usuario_id"], destino["fecha"], destino["hora_fin"], destino["hora_inicio"], bloque_id, nuevo_id)):
+            raise HorarioNoDisponibleError("Esa persona ya tiene otra sesión que se cruza con ese horario.")
+        cambiadas = self.bd.actualizar(
+            "UPDATE disponibilidad SET usuario_id = ?, tema = ?, reservado_en = ? WHERE id = ? AND usuario_id IS NULL",
+            (origen["usuario_id"], origen["tema"], origen["reservado_en"], nuevo_id))
+        if cambiadas == 0:
+            raise HorarioNoDisponibleError("Ese horario acaba de ser ocupado por otra persona.")
+        self._liberar(bloque_id, origen["usuario_id"])
+        return {"anterior": self._a_dict(self._obtener(bloque_id)), "nueva": self._a_dict(self._obtener(nuevo_id))}
+
     # ---------- usuarios ----------
     def disponibles(self, usuario):
         """Bloques libres y futuros: lo que el usuario ve para reservar."""
@@ -262,7 +321,5 @@ class ServicioSesiones:
             raise IndexError("No tienes una reserva con ese número.")   # no revela reservas ajenas
         if self._empieza_en(fila["fecha"], fila["hora_inicio"]) <= self._ahora():
             raise HorarioNoDisponibleError("No puedes cancelar una sesión que ya empezó.")
-        self.bd.actualizar(
-            "UPDATE disponibilidad SET usuario_id = NULL, tema = '', reservado_en = NULL WHERE id = ? AND usuario_id = ?",
-            (bloque_id, usuario.id))
+        self._liberar(bloque_id, usuario.id)
         return self._a_dict(self._obtener(bloque_id))
